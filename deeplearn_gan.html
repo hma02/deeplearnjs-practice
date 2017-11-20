@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <!-- Google Analytics -->
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <script async src="assets/plugins/autotrack.js"></script>
+    <script>
+        window.ga = window.ga || function () {
+            (ga.q = ga.q || []).push(arguments)
+        };
+        ga.l = +new Date;
+        ga('create', 'UA-108549242-1', 'auto');
+
+        // Replace the following lines with the plugins you want to use.
+        // ga('require', 'eventTracker');
+        // ga('require', 'outboundLinkTracker');
+        // ga('require', 'urlChangeTracker');
+        // ...
+
+        ga('send', 'pageview');
+    </script>
+    <!-- End Google Analytics -->
+
+    <!-- Meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="shortcut icon" href="favicon.ico">
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,500,400italic,300italic,300,500italic,700,700italic,900,900italic'
+        rel='stylesheet' type='text/css'>
+    <!-- Global CSS -->
+    <link rel="stylesheet" href="assets/plugins/bootstrap/css/bootstrap.min.css">
+    <!-- Plugins CSS -->
+    <link rel="stylesheet" href="assets/plugins/font-awesome/css/font-awesome.css">
+    <!-- Theme CSS -->
+    <link id="theme-style" rel="stylesheet" href="assets/css/styles.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.bundle.min.js"></script>
+
+
+</head>
+
+
+<style>
+    .main-wrapper {
+        background: #fff;
+        padding: 20px;
+        padding-right: 300px;
+    }
+
+    @media (max-width: 767px) {
+        .main-wrapper {
+            padding: 10px;
+        }
+        .main-wrapper .time {
+            position: static;
+            display: block;
+            margin-top: 5px;
+        }
+    }
+
+    .ink-panel {
+        /* display: flex; */
+        /* flex-direction: column; */
+        font-size: 14px;
+    }
+
+    .subtitle {
+        font-size: 15px;
+        font-weight: bold;
+    }
+
+    .title {
+        align-items: center;
+        /* border-bottom: 1px solid rgba(0, 0, 0, 0.1); */
+        color: black;
+        display: flex;
+        font-weight: 500;
+        height: 20px;
+        min-height: 20px;
+        padding-top: 20px;
+        padding-left: 20px;
+        text-transform: uppercase;
+    }
+
+    #dataset {
+        background: #fafafa;
+        border-right: 1px solid rgba(0, 0, 0, 0.1);
+        min-width: 210px;
+        /* width: 230px; */
+        /* position: relative; */
+    }
+
+    #dataset>div {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+
+    .data-stats {
+        margin-top: 10px;
+    }
+    /* #model-builder-container {
+        display: flex;
+        width: 100%;
+    } */
+
+    #model {
+        border-right: 1px solid rgba(0, 0, 0, 0.1);
+        max-width: 200px;
+        /* position: relative; */
+    }
+
+    #model>div {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+
+
+    .stat {
+        display: table-row;
+    }
+
+    .stat-label,
+    .stat-value {
+        display: table-cell;
+        padding: 5px 15px 5px 0;
+    }
+
+
+    #upload-download-container {
+        padding-top: 15px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid rgba(0, 0, 0, .1);
+    }
+
+    .header {
+        border-bottom: solid .5px #666666;
+        height: 56px;
+        background: slategray;
+        color: #eaeaea;
+        z-index: 999;
+        font-weight: 500;
+        font-size: 22px;
+        padding-left: 12px;
+        line-height: 56px;
+    }
+
+    .train-button-container {
+        margin: 12px 0;
+    }
+
+    .model-error {
+        padding: 12px 0;
+        color: #b80000;
+        font-style: italic;
+    }
+
+    .model-error-info {
+        margin-left: -8px;
+    }
+
+    .invalid-model {
+        display: inline-block;
+    }
+
+    .inference-stats-message,
+    .train-stats-message {
+        line-height: 1.67em;
+    }
+
+    .button {
+        background-color: #a5d6a7;
+    }
+
+    #button-container {
+        width: 400px;
+        margin-top: 15px;
+    }
+
+    #inference {
+        /* border-right: 1px solid rgba(0, 0, 0, 0.1); */
+        /* flex-grow: 2; */
+        /* position: relative; */
+        min-width: 210px;
+    }
+
+    #inference-container {
+        margin-top: 15px;
+    }
+
+    #inference>div {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+
+    .inference-example {
+        display: flex;
+        justify-content: flex-start;
+        margin-bottom: 10px;
+    }
+
+    .inference-example>* {
+        display: table-cell;
+        vertical-align: middle;
+    }
+    /* ----------------------------*/
+
+    .ndarray-image-visualizer {
+        flex-basis: 100px;
+    }
+
+    .ndarray-logits-visualizer {
+        flex-grow: 1;
+    }
+
+    .logit {
+        font-size: 21px;
+    }
+
+    .logit-label {
+        color: #414141;
+        font-size: 18px;
+        line-height: 18px;
+        margin: 4px;
+        display: inline-block;
+        width: 100px;
+    }
+
+    .single-logit-container {
+        display: flex;
+    }
+
+    .logit-viz-outer {
+        flex-grow: 1;
+    }
+
+    .logit-viz-inner {
+        vertical-align: middle;
+        padding: 4px;
+    }
+    /* ----------------------------*/
+    /* 
+.button-container {
+  width: 400px;
+  margin-top: 15px;
+}
+#dataset {
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+  min-width: 230px;
+  width: 230px;
+  position: relative;
+}
+.dataset-dropdown-container {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+.dataset-stats {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+.data-stats-label {
+  font-size: 15px;
+  font-weight: bold;
+}
+.data-stats {
+  margin-top: 10px;
+}
+#real, #generated {
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+  flex-grow: 2;
+  position: relative;
+}
+#real-container, #generated-container {
+  margin-top: 15px;
+}
+#real > div, #generated > div {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.inference-example {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 30px;
+}
+
+.inference-example > * {
+  display: table-cell;
+  vertical-align: middle;
+}
+ndarray-image-visualizer {
+ flex-basis: 100px;
+}
+ndarray-logits-visualizer {
+ flex-grow: 1;
+}
+.ink-panel {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+}
+.layer {
+  display: inline-block;
+  margin-top: 10px;
+}
+#layers, #gen-layers {
+  width: 400px;
+}
+#gan-playground-container {
+  display: flex;
+  width: 100%;
+}
+#model, #gen-model {
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+  width: 400px;
+  position: relative;
+}
+#model, #gen-model  > div {
+  padding-left: 15px;
+}
+.panel-content {
+  padding-top: 15px;
+}
+paper-progress {
+  --paper-progress-indeterminate-cycle-duration: 20s;
+}
+.scrollable-container {
+  margin-top: 0;
+  min-width: 400px;
+}
+.stat {
+  display: table-row;
+}
+
+.stat-label, .stat-value {
+  display: table-cell;
+  padding: 5px 15px 5px 0;
+}
+.subtitle {
+  font-size: 15px;
+  font-weight: bold;
+}
+.title {
+  align-items: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  color: black;
+  display: flex;
+  font-weight: 500;
+  height: 59px;
+  min-height: 65px;
+  padding-top: 5px;
+  padding-left: 20px;
+  text-transform: uppercase;
+}
+#train-stats {
+  width: 350px;
+}
+#train-stats > div {
+  padding-left: 15px;
+}
+.two-way-toggle {
+  display: flex;
+  flex-direction: row;
+}
+.two-way-toggle span {
+  padding-top: 3px;
+  padding-right: 7px;
+}
+#upload-download-container {
+  padding-top: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(0, 0, 0, .1);
+}
+.examples-sec {
+  font-size: 22px;
+}
+
+.header {
+  border-bottom: solid .5px #666666;
+  height: 56px;
+  background: slategray;
+  color: #eaeaea;
+  z-index: 999;
+  font-weight: 500;
+  font-size: 22px;
+  padding-left: 12px;
+  line-height: 56px;
+}
+
+.train-button-container {
+  margin: 12px 0;
+}
+
+.model-error {
+  padding: 12px 0;
+  color: #b80000;
+  font-style: italic;
+}
+
+.model-error-info {
+  margin-left: -8px;
+}
+
+#dataset > div {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+.progress-container {
+  padding: 0 !important;
+}
+.progress-container paper-progress {
+  width: auto;
+}
+.invalid-model {
+  display: inline-block;
+}
+.inference-stats-message, .train-stats-message  {
+  line-height: 1.67em;
+}
+
+.button {
+  background-color: #a5d6a7;
+}
+
+header {
+  background: #fafafa;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  margin-top: 0px;
+}
+
+header h1 {
+  color: rgba(0, 0, 0, 0.9);
+}
+
+article {
+  background: #fafafa;
+  padding: 80px 0;
+  box-shadow: 0 0px 4px rgba(0, 0, 0, 0.1);
+}
+
+article h2, article h3 {
+  margin: 60px 0 20px 0;
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.45em;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+article h3 {
+  margin: 40px 0 20px 0;
+  font-size: 18px;
+}
+
+article :first-child h2 {
+  margin-top: 0;
+}
+
+article p {
+  font-weight: 400;
+  font-size: 17px;
+  line-height: 1.6;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+body {
+  margin: 0;
+}
+
+.l--body {
+  width: 550px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.l--page {
+  width: 944px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (min-width: 1180px) {
+  .l--page {
+    width: 1100px;
+  }
+}
+
+@media (min-width: 1400px) {
+  .l--page {
+    width: 1220px;
+  }
+} */
+</style>
+
+<body onload="start()">
+
+    <!--Navigation bar-->
+    <div id="nav-placeholder">
+    </div>
+    <!--end of Navigation bar-->
+
+    <div class="wrapper" id="wrap">
+
+        <div class="sidebar-wrapper">
+
+            <div class="contact-container container-block">
+                <div class="jumbotron">
+                    <h2>
+                        <a href="https://deeplearnjs.org">DeeplearnJS</a> Practice</h2>
+                    <p style='font-size:1.2em'>This demo minimally reproduces the
+                        <a href="https://github.com/reiinakano/gan-playground">gan-playground</a> example from DeeplearnJS/reiinakano.
+                    </p>
+                </div>
+                <p>Last Update: 2017-11-16</p>
+                <p>
+                    <a href="https://github.com/PAIR-code/deeplearnjs/blob/master/LICENSE">DeeplearnJS's Apache License</a>
+                </p>
+            </div>
+
+        </div>
+
+        <div class="main-wrapper">
+
+            <!-- <div id="model-builder-container"> -->
+            <div class="item row">
+                <div id="dataset" class="ink-panel col-md-3 col-sm-12 col-xs-12">
+                    <div class="title">DATA</div>
+
+                    <hr class="divider" />
+
+                    <div class="form-group">
+                        <label for="dataset-dropdown">Dataset</label>
+                        <select class="form-control" id="dataset-dropdown">
+                            <option>MNIST</option>
+                            <option disabled>RUNE</option>
+                        </select>
+                    </div>
+
+                    <!-- <paper-dropdown-menu no-animations label="Dataset" id="dataset-dropdown" disabled="[[!datasetDownloaded]]">
+                            <paper-listbox attr-for-selected="value" class="dropdown-content" selected="{{selectedDatasetName}}" slot="dropdown-content">
+                                <template is="dom-repeat" items="[[datasetNames]]">
+                                    <paper-item value="[[item]]" label="[[item]]">
+                                        [[item]]
+                                    </paper-item>
+                                </template>
+                            </paper-listbox>
+                        </paper-dropdown-menu> -->
+
+                    <div class="form-group">
+                        <label for="model-dropdown">Model-dis</label>
+                        <select class="form-control" id="model-dropdown">
+                            <option value="Convolutional">Convolutional</option>
+                            <option value="Fully connected">Fully-Connected</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gen-model-dropdown">Model-gen</label>
+                        <select class="form-control" id="gen-model-dropdown">
+                            <option value="Convolutional">Convolutional</option>
+                            <option value="Fully connected">Fully-Connected</option>
+                        </select>
+                    </div>
+
+
+                    <div class="subtitle">Hyperparameters</div>
+
+                    <hr class="divider" />
+
+                    <div class="form-group">
+                        <label for="disc-learning-rate-input" class="control-label">Dis Learning Rate</label>
+                        <div class="controls">
+                            <div class="input-group">
+                                <input name="lri" type="text" class="form-control" id="disc-learning-rate-input">
+                                <div class="input-group-btn">
+                                    <button class="btn btn-default" id="buttondislr" type="submit" onclick="change_dis_lr();">Change</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="disc-momentum" class="control-label">Dis Momentum</label>
+                        <div class="controls">
+                            <div class="input-group">
+                                <input name="momi" type="text" class="form-control" id="disc-momentum">
+                                <div class="input-group-btn">
+                                    <button class="btn btn-default" id="buttondismom" type="submit" onclick="change_dis_momentum();">Change</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="disc-optimizer-dropdown">Dis Optimizer</label>
+                        <select class="form-control" id="disc-optimizer-dropdown">
+                            <option value='sgd'>SGD</option>
+                            <option value='momentum'>Momentum</option>
+                            <option value='adam'>ADAM</option>
+                        </select>
+                    </div>
+
+
+                    <hr class="divider" />
+
+                    <div class="form-group">
+                        <label for="gen-learning-rate-input" class="control-label">Gen Learning Rate</label>
+                        <div class="controls">
+                            <div class="input-group">
+                                <input name="lri" type="text" class="form-control" id="gen-learning-rate-input">
+                                <div class="input-group-btn">
+                                    <button class="btn btn-default" id="buttongenlr" type="submit" onclick="change_gen_lr();">Change</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gen-momentum" class="control-label">Gen Momentum</label>
+                        <div class="controls">
+                            <div class="input-group">
+                                <input name="momi" type="text" class="form-control" id="gen-momentum">
+                                <div class="input-group-btn">
+                                    <button class="btn btn-default" id="buttongenmom" type="submit" onclick="change_gen_momentum();">Change</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gen-optimizer-dropdown">Gen Optimizer</label>
+                        <select class="form-control" id="gen-optimizer-dropdown">
+                            <option value='sgd'>SGD</option>
+                            <option value='momentum'>Momentum</option>
+                            <option value='adam'>ADAM</option>
+                        </select>
+                    </div>
+
+
+                    <hr class="divider" />
+
+
+                    <div class="form-group">
+                        <label for="batch-size" class="control-label">Batch Size</label>
+                        <div class="controls">
+                            <div class="input-group">
+                                <input name="bsi" type="text" class="form-control" id="batch_size_input">
+                                <div class="input-group-btn">
+                                    <button class="btn btn-default" id="buttonbs" type="submit" onclick="change_batch_size();">Change</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="normalization-dropdown">Normalization</label>
+                        <select class="form-control" id="normalization-dropdown">
+                            <option value=0>[-1, 1]</option>
+                            <option value=1>[0, 1]</option>
+                            <option value=2>None</option>
+                        </select>
+                    </div>
+
+
+                    <hr class="divider" />
+                    <div class="train-stats data-stats">
+                        <div class="subtitle">Dataset Statistics</div>
+                        <div class="stat">
+                            <div class="stat-label">Examples</div>
+                            <div class="stat-value" id="statsExampleCount"></div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Input shape</div>
+                            <div class="stat-value" id="statsInputShapeDisplay"></div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Label shape</div>
+                            <div class="stat-value" id="statsLabelShapeDisplay"></div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Pixel range</div>
+                            <div class="stat-value" id="statsInputRange"></div>
+                        </div>
+                    </div>
+
+                </div>
+
+
+
+                <div id="model" class="ink-panel col-md-3 col-sm-12 col-xs-12">
+
+                    <div class='hidden-lg visible-md visible-sm' style="height:50px"></div>
+                    <div class="title">Dis MODEL</div>
+
+                    <hr class="divider" />
+
+                    <div class="form-group">
+                        <label for="environment-dropdown">Environment</label>
+                        <select class="form-control" id="environment-dropdown">
+                            <option value="CPU">CPU</option>
+                            <option value="GPU">GPU</option>
+                        </select>
+                    </div>
+
+                    <div id="layers">
+                        <div id="input-layer" style="border:none;"></div>
+                        <div id="hidden-layers" style="border:none;"></div>
+                        <div id="cost-layer" style="border:none;"></div>
+                        <div id="output-layer" style="border:none;"></div>
+                    </div>
+
+                </div>
+
+                <div id="model" class="ink-panel col-md-3 col-sm-12 col-xs-12">
+
+                    <div class='hidden-lg visible-md visible-sm' style="height:50px"></div>
+                    <div class="title">Gen MODEL</div>
+
+                    <hr class="divider" />
+
+                    <div id="gen-layers">
+                        <div id="gen-input-layer" style="border:none;"></div>
+                        <div id="gen-hidden-layers" style="border:none;"></div>
+                        <div id="gen-cost-layer" style="border:none;"></div>
+                        <div id="gen-output-layer" style="border:none;"></div>
+                    </div>
+                </div>
+
+                <div id="inference" class="ink-panel col-md-3 col-sm-12 col-xs-12">
+
+                    <div class='hidden-lg visible-md visible-sm' style="height:50px"></div>
+                    <div class="title">INFERENCE AND TRAIN STATS</div>
+
+                    <hr class="divider" />
+
+                    <div class="item row">
+                        <div class="subtitle col-md-6 col-sm-6 col-xs-6">Inference</div>
+                        <div class="col-md-6 col-sm-6 col-xs-6">
+                            <input class="btn btn-primary btn-md" id="buttoninfer" type="submit" value="Start Inferring" onclick="ga('send', 'event', 'deeplearn_gan', 'click', 'Start Inferring', 4);"
+                            />
+                        </div>
+                    </div>
+
+                    <hr class="divider" />
+
+                    <div class="inference-stats-message" id="inferencesPerSec">Inferences/sec:</div>
+                    <div class="inference-stats-message" id="inferenceDuration">Inference duration: ms</div>
+                    <div id="real-container">REAL IMAGES</div>
+                    <div id="inference-container"></div>
+
+                    <div class="inference-stats-message" id="generationsPerSec">Generations/sec: </div>
+                    <div class="inference-stats-message" id="generationDuration">Generation duration: ms</div>
+                    <div id="generated-container">GENERATED IMAGES</div>
+
+                    <hr class="divider" />
+
+                    <div class="item row">
+                        <div class="subtitle col-md-6 col-sm-6 col-xs-6">Train</div>
+                        <div class="col-md-6 col-sm-6 col-xs-6">
+                            <input class="btn btn-primary btn-md" id="buttontrain" type="submit" value="Start Training" onclick="ga('send', 'event', 'deeplearn_gan', 'click', 'Start Training', 4);"
+                            />
+                        </div>
+                    </div>
+                    <hr class="divider" />
+
+                    <div class="train-stats-message" id="examplesPerSec">Examples/sec: </div>
+                    <div class="train-stats-message" id="examplesTrained">Examples trained:</div>
+                    <div class="train-stats-message" id="totalTimeSec">Total time: sec.</div>
+                    <div class="chart-container">
+                        <hr class="divider" />
+                        <h5>Loss Graph</h5>
+                        <canvas id="lossgraph"></canvas>
+                        <hr class="divider" />
+                        <h5>Accuracy Graph</h5>
+                        <canvas id="accuracygraph"></canvas>
+                        <hr class="divider" />
+                        <h5>Examples/Sec. Graph</h5>
+                        <canvas id="examplespersecgraph"></canvas>
+                    </div>
+
+
+                </div>
+            </div>
+
+
+
+        </div>
+
+    </div>
+
+
+    <!-- Javascript -->
+    <script type="text/javascript" src="assets/plugins/jquery-1.11.3.min.js"></script>
+    <script type="text/javascript" src="assets/plugins/bootstrap/js/bootstrap.min.js"></script>
+
+    <!-- custom js -->
+    <script type="text/javascript" src="assets/js/nav.js"></script>
+
+    <script src="https://unpkg.com/deeplearn"></script>
+
+    <!-- detect browser support -->
+    <script src="deeplearnjs/support.js"></script>
+    <script src="deeplearnjs/utils.js"></script>
+    <script src="deeplearnjs/gan/model_layer.js"></script>
+    <script src="deeplearnjs/gan/my_graph_runner.js"></script>
+    <script src="https://cs.stanford.edu/people/karpathy/convnetjs/build/vis.js"></script>
+    <script src="https://cs.stanford.edu/people/karpathy/convnetjs/build/util.js"></script>
+
+    <script type="text/javascript" src="deeplearnjs/gan/gan.js"></script>
+
+</body>
+
+</html>
