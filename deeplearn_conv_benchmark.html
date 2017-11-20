@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <!-- Google Analytics -->
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <script async src="assets/plugins/autotrack.js"></script>
+    <script>
+        window.ga = window.ga || function () {
+            (ga.q = ga.q || []).push(arguments)
+        };
+        ga.l = +new Date;
+        ga('create', 'UA-108549242-1', 'auto');
+
+        // Replace the following lines with the plugins you want to use.
+        // ga('require', 'eventTracker');
+        // ga('require', 'outboundLinkTracker');
+        // ga('require', 'urlChangeTracker');
+        // ...
+
+        ga('send', 'pageview');
+    </script>
+    <!-- End Google Analytics -->
+
+    <!-- Meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="shortcut icon" href="favicon.ico">
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,500,400italic,300italic,300,500italic,700,700italic,900,900italic'
+        rel='stylesheet' type='text/css'>
+    <!-- Global CSS -->
+    <link rel="stylesheet" href="assets/plugins/bootstrap/css/bootstrap.min.css">
+    <!-- Plugins CSS -->
+    <link rel="stylesheet" href="assets/plugins/font-awesome/css/font-awesome.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.bundle.min.js"></script>
+
+    <!-- Theme CSS -->
+    <link id="theme-style" rel="stylesheet" href="assets/css/styles.css">
+
+</head>
+<style>
+    .main-wrapper {
+        background: #fff;
+        padding: 20px;
+        padding-right: 300px;
+        min-height: 500px;
+    }
+
+    @media (max-width: 767px) {
+        .main-wrapper {
+            padding: 10px;
+        }
+        .main-wrapper .time {
+            position: static;
+            display: block;
+            margin-top: 5px;
+        }
+    }
+</style>
+
+<body onload="start()">
+
+    <!--Navigation bar-->
+    <div id="nav-placeholder">
+    </div>
+    <!--end of Navigation bar-->
+
+    <div class="wrapper" id="wrap">
+
+        <div class="sidebar-wrapper">
+
+            <div class="contact-container container-block">
+                <div class="jumbotron">
+                    <h2>
+                        <a href="https://deeplearnjs.org">DeeplearnJS</a> Practice</h2>
+                    <p style='font-size:1.2em'>This demo minimally combines the
+                        <a href="https://github.com/PAIR-code/deeplearnjs/blob/master/demos/benchmarks/conv_benchmarks.ts">Convolution Benchmark</a> from DeeplearnJS and
+                        <a href="https://github.com/karpathy/convnetjs/blob/master/demo/speedtest.html">speedtest</a> from ConvNetJS.
+                    </p>
+                </div>
+                <p>Last Update: 2017-11-9</p>
+                <p>
+                    <a href="https://github.com/PAIR-code/deeplearnjs/blob/master/LICENSE">DeeplearnJS's Apache License</a>
+                </p>
+            </div>
+
+        </div>
+
+        <div class="main-wrapper">
+
+            <div class="item row well well-lg">
+
+                <div class="col-md-6 col-sm-6 col-xs-12">
+
+
+                    <span style="font-size: 13pt">DeeplearnJS </span>
+
+                    <input class="btn btn-primary btn-md" id="buttontp_dljs" style="background-color: rgb(255, 99, 132);" type="submit" value="Run Benchmark"
+                    />
+
+                </div>
+
+                <div class="col-md-6 col-sm-6 col-xs-12">
+
+                    <div class='hidden-lg hidden-md hidden-sm' style="height:20px"></div>
+
+                    <span style="font-size: 13pt">ConvNetJS </span>
+
+                    <input class="btn btn-primary btn-md" id="buttontp_cnjs" style="background-color: rgb(54, 162, 235);" type="submit" value="Run Benchmark"
+                    />
+
+                </div>
+
+
+            </div>
+
+            <div class="item row">
+                <div class="col-md-8 col-sm-12 col-xs-12">
+                    <canvas id="plot" width="400" height="300"></canvas>
+                    <br>
+                    <br>
+                </div>
+
+                <!-- <hr class="divider" /> -->
+                <div class="table-responsive col-md-4 col-sm-12 col-xs-12">
+                    <table class="table" id="divTable">
+                    </table>
+                </div>
+            </div>
+
+
+
+        </div>
+
+    </div>
+
+
+    <!-- Javascript -->
+    <script type="text/javascript" src="assets/plugins/jquery-1.11.3.min.js"></script>
+    <script type="text/javascript" src="assets/plugins/bootstrap/js/bootstrap.min.js"></script>
+
+    <!-- custom js -->
+    <script type="text/javascript" src="assets/js/nav.js"></script>
+
+    <script src="https://unpkg.com/deeplearn"></script>
+
+    <!-- detect browser support -->
+    <script src="deeplearnjs/support.js"></script>
+    <script src="deeplearnjs/utils.js"></script>
+    <script src="convnetjs/convnet.js"></script>
+    <script src="deeplearnjs/benchmark.js"></script>
+
+
+</body>
+
+</html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <!-- Google Analytics -->
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <script async src="assets/js/autotrack.js"></script>
+    <script>
+        window.ga = window.ga || function () {
+            (ga.q = ga.q || []).push(arguments)
+        };
+        ga.l = +new Date;
+        ga('create', 'UA-108549242-1', 'auto');
+
+        // Replace the following lines with the plugins you want to use.
+        // ga('require', 'eventTracker');
+        // ga('require', 'outboundLinkTracker');
+        // ga('require', 'urlChangeTracker');
+        // ...
+
+        ga('send', 'pageview');
+    </script>
+    <!-- End Google Analytics -->
+
+    <!-- Meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="CV">
+    <meta name="author" content="Allan Ma">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,500,400italic,300italic,300,500italic,700,700italic,900,900italic'
+        rel='stylesheet' type='text/css'>
+    <!-- Global CSS -->
+    <link rel="stylesheet" href="assets/plugins/bootstrap/css/bootstrap.min.css">
+    <!-- Plugins CSS -->
+    <link rel="stylesheet" href="assets/plugins/font-awesome/css/font-awesome.css">
+
+    <!-- Theme CSS -->
+    <link id="theme-style" rel="stylesheet" href="assets/css/styles.css">
+
+    <title>MNIST Image Classification</title>
+
+</head>
+
+<body onload="start()">
+
+    <!--Navigation bar-->
+    <div id="nav-placeholder">
+    </div>
+    <!--end of Navigation bar-->
+
+    <div class="wrapper" id="wrap">
+
+        <div class="sidebar-wrapper">
+
+            <div class="contact-container container-block">
+                <div class="jumbotron">
+                    <h2>
+                        <a href="https://cs.stanford.edu/people/karpathy/convnetjs/">ConvNetJS</a> Practice</h2>
+                    <p style='font-size:1.2em'>This demo is a practice of using ConvNetJS. It minimally reproduces the
+                        <a href="https://cs.stanford.edu/people/karpathy/convnetjs/demo/mnist.html">MNIST Demo</a>
+                        from Andrej Karpathy for educational purpose.
+                    </p>
+                </div>
+                <p>Last Update: 2017-4-24</p>
+                <p>
+                    <a href="https://github.com/karpathy/convnetjs/blob/master/LICENSE">ConvNetJS's MIT License</a>
+                </p>
+            </div>
+
+        </div>
+
+        <div class="main-wrapper">
+
+            <div class="item row">
+
+                <div class="col-md-6 col-sm-12 col-xs-12">
+                    <input class="btn btn-primary btn-md" id="buttontp" type="submit" value="Start Training" onclick="ga('send', 'event', 'convnetjs', 'click', 'Start Training', 1);toggle_pause();"
+                    />
+                    <hr class="divider" />
+
+                    <h4 class="title">
+                        <a>Hyper params </a>
+
+                    </h4>
+
+
+
+                    <!-- <div id="controls">
+                        Learning rate:
+                        <input name="lri" type="text" id="lr_input0" />
+                        <input id="buttonlr0" type="submit" value="change" onclick="change_lr();" />
+                        <br /> Momentum:
+                        <input name="momi" type="text" id="momentum_input0" />
+                        <input id="buttonmom" type="submit" value="change" onclick="change_momentum();" />
+                        <br /> Batch size:
+                        <input name="bsi" type="text" id="batch_size_input0" />
+                        <input id="buttonbs0" type="submit" value="change" onclick="change_batch_size();" />
+                        <br /> Weight decay:
+                        <input name="wdi" type="text" id="decay_input0" />
+                        <input id="buttonwd0" type="submit" value="change" onclick="change_decay();" />
+                    </div> -->
+
+                    <form class="form-horizontal" role="form" onSubmit="return false;">
+
+                        <div class="form-group">
+                            <label for="lr_input" class="col-md-5 col-sm-12 col-xs-4 control-label">Learning Rate</label>
+                            <div class="col-md-7 col-sm-12 col-xs-8 controls">
+                                <div class="input-group">
+                                    <input name="lri" type="text" class="form-control" id="lr_input">
+                                    <div class="input-group-btn">
+                                        <button class="btn btn-default" id="buttonlr" type="submit" onclick="change_lr();">Change</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="form-group">
+                            <label for="momentum_input" class="col-md-5 col-sm-12 col-xs-4 control-label">Momentum</label>
+                            <div class="col-md-7 col-sm-12 col-xs-8 controls">
+                                <div class="input-group">
+                                    <input name="momi" type="text" class="form-control" id="momentum_input">
+                                    <div class="input-group-btn">
+                                        <button class="btn btn-default" id="buttonmom" type="submit" onclick="change_momentum();">Change</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="batch_size_input" class="col-md-5 col-sm-12 col-xs-4 control-label">Batch Size</label>
+                            <div class="col-md-7 col-sm-12 col-xs-8 controls">
+                                <div class="input-group">
+                                    <input name="bsi" type="text" class="form-control" id="batch_size_input">
+                                    <div class="input-group-btn">
+                                        <button class="btn btn-default" id="buttonbs" type="submit" onclick="change_batch_size();">Change</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="decay_input" class="col-md-5 col-sm-12 col-xs-4 control-label">Weight decay</label>
+                            <div class="col-md-7 col-sm-12 col-xs-8 controls">
+                                <div class="input-group">
+                                    <input name="wdi" type="text" class="form-control" id="decay_input">
+                                    <div class="input-group-btn">
+                                        <button class="btn btn-default" id="buttonwd" type="submit" onclick="change_decay();">Change</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                </div>
+
+                <div class="col-md-6 col-sm-12 col-xs-12">
+
+                    <h4 class="title">
+                        <a>Training Stats</a>
+                    </h4>
+                    <div id="trainstats" style="min-height: 130px;"></div>
+
+                    <div style="min-height: 160px;">
+                        <h4 class="title">
+                            <a>Loss Graph</a>
+                        </h4>
+                        <canvas id="lossgraph"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+            <hr class="divider" />
+
+
+            <div class="item row" style="min-height: 95px;">
+
+                <div class="col-md-4 col-sm-4 col-xs-12">
+                    <h4 class="title">
+                        <a>Network Visualization</a>
+                    </h4>
+                    <div id="cldiv"></div>
+                    <div id="egdiv"></div>
+                </div>
+
+                <div class="col-md-8 col-sm-8 col-xs-12">
+                    <div id="visnet"></div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Javascript -->
+    <script type="text/javascript" src="assets/plugins/jquery-1.11.3.min.js"></script>
+    <script type="text/javascript" src="assets/plugins/bootstrap/js/bootstrap.min.js"></script>
+
+
+    <script type="text/javascript" src="assets/js/nav.js"></script>
+
+
+    <!-- import convnetjs library -->
+    <script src="convnetjs/convnet.js"></script>
+    <script src="https://cs.stanford.edu/people/karpathy/convnetjs/build/vis.js"></script>
+    <script src="https://cs.stanford.edu/people/karpathy/convnetjs/build/util.js"></script>
+    <script src="https://cs.stanford.edu/people/karpathy/convnetjs/demo/mnist/mnist_labels.js"></script>
+
+    <script type="text/javascript" src="convnetjs/main.js"></script>
+
+
+</body>
+
+</html>

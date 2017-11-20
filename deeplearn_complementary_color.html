@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <!-- Google Analytics -->
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <script async src="assets/plugins/autotrack.js"></script>
+    <script>
+        window.ga = window.ga || function () {
+            (ga.q = ga.q || []).push(arguments)
+        };
+        ga.l = +new Date;
+        ga('create', 'UA-108549242-1', 'auto');
+
+        // Replace the following lines with the plugins you want to use.
+        // ga('require', 'eventTracker');
+        // ga('require', 'outboundLinkTracker');
+        // ga('require', 'urlChangeTracker');
+        // ...
+
+        ga('send', 'pageview');
+    </script>
+    <!-- End Google Analytics -->
+
+    <!-- Meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="shortcut icon" href="favicon.ico">
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,500,400italic,300italic,300,500italic,700,700italic,900,900italic'
+        rel='stylesheet' type='text/css'>
+    <!-- Global CSS -->
+    <link rel="stylesheet" href="assets/plugins/bootstrap/css/bootstrap.min.css">
+    <!-- Plugins CSS -->
+    <link rel="stylesheet" href="assets/plugins/font-awesome/css/font-awesome.css">
+
+    <!-- Theme CSS -->
+    <link id="theme-style" rel="stylesheet" href="assets/css/styles.css">
+
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+</head>
+
+
+<style>
+    * {
+        font-family: arial, sans-serif;
+    }
+
+    #color-table {
+        border-collapse: collapse;
+        text-align: center;
+    }
+
+    #color-table,
+    #color-table th,
+    #color-table td {
+        border: 1px solid rgba(0, 0, 0, 0);
+    }
+
+    #color-table th,
+    #color-table td {
+        padding: 2px;
+    }
+
+    #color-table td {
+        width: 10px;
+    }
+
+    .color-box {
+        border-radius: 5px;
+        height: 30px;
+        margin: 3px 0 0 0;
+        width: 100%;
+    }
+</style>
+
+<body onload="start()">
+
+    <!--Navigation bar-->
+    <div id="nav-placeholder">
+    </div>
+    <!--end of Navigation bar-->
+
+    <div class="wrapper" id="wrap">
+
+        <div class="sidebar-wrapper">
+
+            <div class="contact-container container-block">
+                <div class="jumbotron">
+                    <h2>
+                        <a href="https://deeplearnjs.org">DeeplearnJS</a> Practice</h2>
+
+                    <p style='font-size:1.2em'>
+                        This demo is a fork of the
+                        <a href="https://github.com/PAIR-code/deeplearnjs/tree/master/demos/complementary-color-prediction">Complementary Color Prediction Demo</a> from DeeplearnJS with minor changes for training stability.
+
+                    </p>
+
+                </div>
+                <p>Last Update: 2017-11-3</p>
+                <p>
+                    <a href="https://github.com/PAIR-code/deeplearnjs/blob/master/LICENSE">DeeplearnJS's Apache License</a>
+                </p>
+            </div>
+
+        </div>
+
+        <div class="main-wrapper">
+
+            <div class="item row">
+
+                <div class="col-md-6 col-sm-6 col-xs-6">
+                    <input class="btn btn-primary btn-md" id="buttontp" type="submit" value="Start Training" onclick="ga('send', 'event', 'deeplearn_complementary_color', 'click', 'Start Training', 2);toggle_pause();"
+                    />
+
+                </div>
+
+                <div class="col-md-6 col-sm-6 col-xs-6" id="egdiv"></div>
+
+            </div>
+
+            <hr class="divider" />
+
+            <h4 class="title">
+                <a>Color visualization</a>
+            </h4>
+
+            <div class="overflow-x:auto;">
+                <table class="table" id='color-table' border='0'>
+                    <tr>
+                        <th>Original Color</th>
+                        <th>Actual Complement</th>
+                        <th>Predicted Complement</th>
+                    </tr>
+                    <tr data-original-color='244,67,54'>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr data-original-color='156,39,176'>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr data-original-color='158,158,158'>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </table>
+
+            </div>
+
+            <hr class="divider" />
+
+            <h4 class="title">
+                <a>Color Space Trace</a>
+            </h4>
+
+            <div id="graph-color" class="responsive-plot" style="min-height: 300px;"></div>
+
+        </div>
+
+    </div>
+
+
+    <!-- Javascript -->
+    <script type="text/javascript" src="assets/plugins/jquery-1.11.3.min.js"></script>
+    <script type="text/javascript" src="assets/plugins/bootstrap/js/bootstrap.min.js"></script>
+
+    <!-- custom js -->
+    <script type="text/javascript" src="assets/js/nav.js"></script>
+
+    <script src="https://unpkg.com/deeplearn"></script>
+
+    <!-- detect browser support -->
+    <script src="deeplearnjs/support.js"></script>
+
+    <!-- <script src="non_ml_exports.js"></script> -->
+    <script src="deeplearnjs/complementary_color.js"></script>
+
+
+</body>
+
+</html>
