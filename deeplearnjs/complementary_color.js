@@ -219,8 +219,6 @@ function train1Batch(shouldFetchCost) {
     return costValue;
 }
 
-
-
 function predict(rgbColor) {
     let complementColor = [];
     math.scope((keep, track) => {
@@ -407,6 +405,65 @@ function update_plot3d(new_x, new_y, new_z) {
 }
 
 
+
+var config = {
+    type: 'line',
+    data: {
+        datasets: [{
+            data: [],
+            fill: false,
+            label: ' ',
+            // pointRadius: 0,
+            borderColor: 'rgba(75,192,192,1)',
+            backgroundColor: 'rgba(75,192,192,1)',
+            borderWidth: 1,
+            // lineTension: 0,
+            // pointHitRadius: 8
+        }]
+    },
+    options: {
+        animation: {
+            duration: 0
+        },
+        responsive: false,
+        scales: {
+            xAxes: [{
+                type: 'linear',
+                position: 'bottom'
+            }],
+            yAxes: [{
+                ticks: {
+                    min: null,
+                    callback: (label, index, labels) => {
+                        let num = Number(label).toFixed(2);
+                        return `${num}`;
+                    }
+                }
+            }]
+        }
+    }
+};
+
+function createChart(canvasId, label, data, min = 0, max = null) {
+
+    const canvas = document.getElementById(canvasId);
+
+    const context = canvas.getContext('2d');
+
+    config.data.datasets[0].data = data;
+    config.data.datasets[0].label = label;
+
+    return new Chart(context, config);
+
+
+}
+var chartData = []
+
+var chart = createChart('plot', 'cost', chartData, 0, chartData.y);
+chart.update();
+var chart_exist = true;
+
+
 function train_per() {
     if (step > 4242) {
         // Stop training.
@@ -415,7 +472,7 @@ function train_per() {
 
     if (paused) return;
 
-    // We only fetch the cost every 5 steps because doing so requires a transfer
+    // We only fetch the cost every 10 steps because doing so requires a transfer
     // of data from the GPU.
 
     cost = train1Batch(step % 10 === 0);
@@ -424,6 +481,14 @@ function train_per() {
     d.innerHTML = 'step = ' + step;
 
     if (step % 10 === 0) {
+
+        chartData.push({
+            x: step,
+            y: cost
+        });
+
+        config.data.datasets[0].data = chartData;
+        chart.update();
 
         // Print data to console so the user can inspect.
         console.log('step', step - 1, 'cost', cost);
@@ -494,8 +559,7 @@ function run() {
     } else {
         update_net_param_display();
         console.log('waiting!');
-        // load_data_batch(0);
-        setTimeout(run, 1000); // run start again after 1second
+        setTimeout(run, 1000); // run again after 1second
     } // keep checking
 }
 
