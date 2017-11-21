@@ -118,6 +118,7 @@ var modelNames;
 // selectedModelName: string;
 var optimizerNames; //: string[];
 var selectedOptimizerName;
+var selectedEnvName;
 var loadedWeights;
 var dataSets;
 //: {
@@ -836,22 +837,27 @@ function run() {
     beta2 = 0.999;
     needBeta2 = false;
     batchSize = 64;
-    update_net_param_display();
 
-    // math = mathGPU;
+    updateNetParamDisplay();
+
+
 
     var normalizationDropdown = document.getElementById("normalization-dropdown");
     normalizationDropdown.options[selectedNormalizationOption].selected = 'selected';
 
     // Default optimizer is momentum
     selectedOptimizerName = 'momentum';
-    optimizerNames = ['sgd', 'momentum', 'rmsprop', 'adagrad', 'adadelta', 'adam', 'adamax'];
+    // optimizerNames = ['sgd', 'momentum', 'rmsprop', 'adagrad', 'adadelta', 'adam', 'adamax'];
     var optimizerDropdown = document.getElementById("optimizer-dropdown");
-    optimizerDropdown.options[1].selected = 'selected';
+    var ind = indexOfDropdownOptions(optimizerDropdown.options, selectedOptimizerName);
+    optimizerDropdown.options[ind].selected = 'selected';
 
+    // math = mathGPU;
     var envDropdown = document.getElementById("environment-dropdown");
-    envDropdown.options[1].selected = 'selected';
-    updateSelectedEnvironment(envDropdown);
+    selectedEnvName = 'GPU';
+    var ind = indexOfDropdownOptions(envDropdown.options, selectedEnvName)
+    envDropdown.options[ind].selected = 'selected';
+    updateSelectedEnvironment(selectedEnvName, graphRunner);
 
     createGraphRunner();
 
@@ -882,11 +888,10 @@ function run() {
     {
         const normalizationDropdown =
             document.querySelector('#normalization-dropdown');
-        // tslint:disable-next-line:no-any
         normalizationDropdown.addEventListener('change', (event) => {
             const selectedNormalizationOption = Number(event.target.value);
 
-            console.log('normalization =', selectedNormalizationOption)
+            console.log('normalization =', event.target.options[selectedNormalizationOption].innerHTML);
             applyNormalization(selectedNormalizationOption);
             setupDatasetStats();
         });
@@ -894,6 +899,7 @@ function run() {
     document.querySelector('#optimizer-dropdown').addEventListener('change', (event) => {
         // Activate, deactivate hyper parameter inputs.
         refreshHyperParamRequirements(event.target.value);
+        selectedOptimizerName = event.target.value;
         console.log('optimizer =', event.target.value)
     });
 
@@ -930,7 +936,8 @@ function run() {
     // });
 
     document.querySelector('#environment-dropdown').addEventListener('change', (event) => {
-        updateSelectedEnvironment(event.target, graphRunner)
+        selectedEnvName = event.target.value;
+        updateSelectedEnvironment(selectedEnvName, graphRunner)
     });
 
     hiddenLayers = [];
@@ -938,10 +945,10 @@ function run() {
     inferencesPerSec = 0;
 }
 
-function updateSelectedEnvironment(elt, _graphRunner = null) {
+function updateSelectedEnvironment(selectedEnvName, _graphRunner = null) {
 
-    math = (elt.value === 'GPU') ? mathGPU : mathCPU;
-    console.log('math =', math === mathGPU ? 'mathGPU' : 'mathCPU')
+    math = (selectedEnvName === 'GPU') ? mathGPU : mathCPU;
+    console.log('math =', math == mathGPU ? 'mathGPU' : 'mathCPU')
     if (_graphRunner != null) {
         _graphRunner.setMath(math);
     }
@@ -974,21 +981,21 @@ function createGraphRunner() {
 // user settings
 var change_lr = function () {
     learningRate = parseFloat(document.getElementById("lr_input").value);
-    graphRunner.learningRate = learningRate;
+    graphRunner.optimizer.learningRate = learningRate;
     console.log('learning rate changed to' + learningRate);
-    update_net_param_display();
+    updateNetParamDisplay();
 }
 var change_momentum = function () {
     momentum = parseFloat(document.getElementById("momentum_input").value);
     graphRunner.optimizer.momentum = momentum;
     console.log('momentum changed to' + momentum);
-    update_net_param_display();
+    updateNetParamDisplay();
 }
 var change_batch_size = function () {
     batchSize = parseFloat(document.getElementById("batch_size_input").value);
     graphRunner.batchSize = batchSize;
     console.log('batch size changed to' + batchSize);
-    update_net_param_display();
+    updateNetParamDisplay();
 }
 
 var infer_request = null;
@@ -1037,7 +1044,7 @@ btn_train.addEventListener('click', () => {
     }
 });
 
-var update_net_param_display = function () {
+var updateNetParamDisplay = function () {
     document.getElementById('lr_input').value = learningRate;
     document.getElementById('momentum_input').value = momentum;
     document.getElementById('batch_size_input').value = batchSize;
