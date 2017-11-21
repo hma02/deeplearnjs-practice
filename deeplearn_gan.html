@@ -552,16 +552,16 @@ body {
                     <div class="form-group">
                         <label for="model-dropdown">Model-dis</label>
                         <select class="form-control" id="model-dropdown">
-                            <option value="Convolutional">Convolutional</option>
-                            <option value="Fully connected">Fully-Connected</option>
+                            <option value="Convolutional (disc)">Convolutional</option>
+                            <option value="Fully connected (disc)">Fully-Connected</option>
                         </select>
                     </div>
 
                     <div class="form-group">
                         <label for="gen-model-dropdown">Model-gen</label>
                         <select class="form-control" id="gen-model-dropdown">
-                            <option value="Convolutional">Convolutional</option>
-                            <option value="Fully connected">Fully-Connected</option>
+                            <option value="Convolutional (gen)">Convolutional</option>
+                            <option value="Fully connected (gen)">Fully-Connected</option>
                         </select>
                     </div>
 
@@ -576,7 +576,7 @@ body {
                             <div class="input-group">
                                 <input name="lri" type="text" class="form-control" id="disc-learning-rate-input">
                                 <div class="input-group-btn">
-                                    <button class="btn btn-default" id="buttondislr" type="submit" onclick="change_dis_lr();">Change</button>
+                                    <button class="btn btn-default" id="buttondislr" type="submit" onclick="changeNetParam();">Change</button>
                                 </div>
                             </div>
                         </div>
@@ -588,7 +588,7 @@ body {
                             <div class="input-group">
                                 <input name="momi" type="text" class="form-control" id="disc-momentum">
                                 <div class="input-group-btn">
-                                    <button class="btn btn-default" id="buttondismom" type="submit" onclick="change_dis_momentum();">Change</button>
+                                    <button class="btn btn-default" id="buttondismom" type="submit" onclick="changeNetParam();">Change</button>
                                 </div>
                             </div>
                         </div>
@@ -599,7 +599,11 @@ body {
                         <select class="form-control" id="disc-optimizer-dropdown">
                             <option value='sgd'>SGD</option>
                             <option value='momentum'>Momentum</option>
+                            <option value='rmsprop'>RMSprop</option>
+                            <option value='adagrad'>Adagrad</option>
+                            <option value='adadelta'>Adadelta</option>
                             <option value='adam'>ADAM</option>
+                            <option value='adamax'>Adamax</option>
                         </select>
                     </div>
 
@@ -612,7 +616,7 @@ body {
                             <div class="input-group">
                                 <input name="lri" type="text" class="form-control" id="gen-learning-rate-input">
                                 <div class="input-group-btn">
-                                    <button class="btn btn-default" id="buttongenlr" type="submit" onclick="change_gen_lr();">Change</button>
+                                    <button class="btn btn-default" id="buttongenlr" type="submit" onclick="changeNetParam();">Change</button>
                                 </div>
                             </div>
                         </div>
@@ -624,7 +628,7 @@ body {
                             <div class="input-group">
                                 <input name="momi" type="text" class="form-control" id="gen-momentum">
                                 <div class="input-group-btn">
-                                    <button class="btn btn-default" id="buttongenmom" type="submit" onclick="change_gen_momentum();">Change</button>
+                                    <button class="btn btn-default" id="buttongenmom" type="submit" onclick="changeNetParam();">Change</button>
                                 </div>
                             </div>
                         </div>
@@ -635,7 +639,11 @@ body {
                         <select class="form-control" id="gen-optimizer-dropdown">
                             <option value='sgd'>SGD</option>
                             <option value='momentum'>Momentum</option>
+                            <option value='rmsprop'>RMSprop</option>
+                            <option value='adagrad'>Adagrad</option>
+                            <option value='adadelta'>Adadelta</option>
                             <option value='adam'>ADAM</option>
+                            <option value='adamax'>Adamax</option>
                         </select>
                     </div>
 
@@ -644,12 +652,12 @@ body {
 
 
                     <div class="form-group">
-                        <label for="batch-size" class="control-label">Batch Size</label>
+                        <label for="batch_size_input" class="control-label">Batch Size</label>
                         <div class="controls">
                             <div class="input-group">
                                 <input name="bsi" type="text" class="form-control" id="batch_size_input">
                                 <div class="input-group-btn">
-                                    <button class="btn btn-default" id="buttonbs" type="submit" onclick="change_batch_size();">Change</button>
+                                    <button class="btn btn-default" id="buttonbs" type="submit" onclick="changeNetParam();">Change</button>
                                 </div>
                             </div>
                         </div>

@@ -165,6 +165,16 @@ class NDArrayImageVisualizer {
     }
 }
 
+function indexOfDropdownOptions(options, selectedName) {
+
+    for (var i = 0; i < options.length; i++) {
+        if (options[i].value === selectedName) {
+            return i
+        }
+
+    }
+    console.assert(false, 'can not find selected option in option array');
+}
 
 var chartDataX = [];
 var chartData = [];

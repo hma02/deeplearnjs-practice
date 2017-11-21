@@ -15,11 +15,6 @@
  * =============================================================================
  */
 
-// import './ndarray-image-visualizer';
-// import './ndarray-logits-visualizer';
-// import './model-layer';
-
-// tslint:disable-next-line:max-line-length
 
 
 function insertLayerTableRow(elt, name, inShape, outShape) {
@@ -87,6 +82,7 @@ var RMSPropOptimizer = dl.RMSPropOptimizer;
 var AdagradOptimizer = dl.AdagradOptimizer;
 var AdadeltaOptimizer = dl.AdadeltaOptimizer;
 var AdamOptimizer = dl.AdamOptimizer;
+var AdamaxOptimizer = dl.AdamaxOptimizer;
 var NDArray = dl.NDArray;
 var NDArrayMath = dl.NDArrayMath;
 var NDArrayMathCPU = dl.NDArrayMathCPU;
@@ -247,6 +243,7 @@ var generatedImage;
 
 var datasetDownloaded;
 var datasetNames;
+var selectedEnvName;
 var selectedDatasetName;
 var modelNames;
 var genModelNames;
@@ -473,6 +470,15 @@ function refreshHyperParamRequirements(optimizerName,
                 break;
             }
         case 'adam':
+            {
+                if (which === 'gen') {
+                    genNeedBeta = true;
+                } else {
+                    discNeedBeta = true;
+                }
+                break;
+            }
+        case 'adamax':
             {
                 if (which === 'gen') {
                     genNeedBeta = true;
@@ -889,10 +895,7 @@ function updateSelectedModel(modelName, which) {
         return;
     }
 
-    loadModelFromPath(xhrDatasetConfigs[selectedDatasetName]
-        .modelConfigs[modelName]
-        .path,
-        which);
+    loadModelFromPath(xhrDatasetConfigs[selectedDatasetName].modelConfigs[modelName].path, which);
 }
 
 function loadModelFromPath(modelPath, which) {
@@ -912,12 +915,16 @@ function loadModelFromPath(modelPath, which) {
 function setupDatasetStats() {
     datasetStats = dataSet.getStats();
     statsExampleCount = datasetStats[IMAGE_DATA_INDEX].exampleCount;
+    document.getElementById("statsExampleCount").innerHTML = `${statsExampleCount}`;
     statsInputRange = '[' + datasetStats[IMAGE_DATA_INDEX].inputMin +
         ', ' + datasetStats[IMAGE_DATA_INDEX].inputMax + ']';
+    document.getElementById("statsInputRange").innerHTML = `${statsInputRange}`;
     statsInputShapeDisplay = getDisplayShape(
         datasetStats[IMAGE_DATA_INDEX].shape);
+    document.getElementById("statsInputShapeDisplay").innerHTML = `${statsInputShapeDisplay}`;
     statsLabelShapeDisplay = getDisplayShape(
         datasetStats[LABEL_DATA_INDEX].shape);
+    document.getElementById("statsLabelShapeDisplay").innerHTML = `${statsLabelShapeDisplay}`;
     showDatasetStats = true;
 }
 
@@ -1222,10 +1229,10 @@ function addLayer(which) {
 
 function removeLayer(modelLayer, which) {
     if (which === 'gen') {
-        genLayersContainer.removeChild(modelLayer);
+        genLayersContainer.removeChild(modelLayer.paramContainer);
         genHiddenLayers.splice(genHiddenLayers.indexOf(modelLayer), 1);
     } else {
-        layersContainer.removeChild(modelLayer);
+        layersContainer.removeChild(modelLayer.paramContainer);
         discHiddenLayers.splice(discHiddenLayers.indexOf(modelLayer), 1);
     }
     layerParamChanged();
@@ -1234,12 +1241,12 @@ function removeLayer(modelLayer, which) {
 function removeAllLayers(which) {
     if (which === 'gen') {
         for (let i = 0; i < genHiddenLayers.length; i++) {
-            genLayersContainer.removeChild(genHiddenLayers[i]);
+            genLayersContainer.removeChild(genHiddenLayers[i].paramContainer);
         }
         genHiddenLayers = [];
     } else {
         for (let i = 0; i < discHiddenLayers.length; i++) {
-            layersContainer.removeChild(discHiddenLayers[i]);
+            layersContainer.removeChild(discHiddenLayers[i].paramContainer);
         }
         discHiddenLayers = [];
     }
@@ -1393,10 +1400,49 @@ function loadWeightsFromJson(weightsJson) {
 
 
 
-
 function run() {
 
-    math = mathGPU;
+    discLearningRate = 0.01;
+    genLearningRate = 0.01;
+    discMomentum = 0.1;
+    genMomentum = 0.1;
+    discNeedMomentum = false;
+    genNeedMomentum = false;
+    discGamma = 0.1;
+    genGamma = 0.1;
+    discBeta1 = 0.9;
+    discBeta2 = 0.999;
+    genBeta1 = 0.9;
+    genBeta2 = 0.999;
+    discNeedGamma = false;
+    genNeedGamma = false;
+    discNeedBeta = false;
+    genNeedBeta = true;
+    batchSize = 15;
+
+    updateNetParamDisplay();
+
+    var normalizationDropdown = document.getElementById("normalization-dropdown");
+    normalizationDropdown.options[selectedNormalizationOption].selected = 'selected';
+
+    var envDropdown = document.getElementById("environment-dropdown");
+    selectedEnvName = 'GPU';
+    var ind = indexOfDropdownOptions(envDropdown.options, selectedEnvName)
+    envDropdown.options[ind].selected = 'selected';
+    updateSelectedEnvironment(selectedEnvName, graphRunner);
+
+
+    // Default optimizer is momentum
+    discSelectedOptimizerName = "sgd";
+    genSelectedOptimizerName = "adam";
+
+    var discOptimizerDropdown = document.getElementById("disc-optimizer-dropdown");
+    var ind = indexOfDropdownOptions(discOptimizerDropdown.options, discSelectedOptimizerName)
+    discOptimizerDropdown.options[ind].selected = 'selected';
+
+    var genOptimizerDropdown = document.getElementById("gen-optimizer-dropdown");
+    var ind = indexOfDropdownOptions(genOptimizerDropdown.options, genSelectedOptimizerName)
+    genOptimizerDropdown.options[ind].selected = 'selected';
 
     const eventObserver = {
         batchesTrainedCallback: (batchesTrained) =>
@@ -1435,72 +1481,57 @@ function run() {
     //             removeAllLayers('gen');
     //             removeAllLayers('disc');
     //         });
-    // document.querySelector('#model-dropdown .dropdown-content')
-    //     .addEventListener(
-    //         // tslint:disable-next-line:no-any
-    //         'iron-activate', (event) => {
-    //             // Update the model.
-    //             const modelName = event.detail.selected;
-    //             updateSelectedModel(modelName, 'disc');
-    //         });
-    // document.querySelector('#gen-model-dropdown .dropdown-content')
-    //     .addEventListener(
-    //         // tslint:disable-next-line:no-any
-    //         'iron-activate', (event) => {
-    //             // Update the model.
-    //             const modelName = event.detail.selected;
-    //             updateSelectedModel(modelName, 'gen');
-    //         });
 
-    // {
-    //     const normalizationDropdown =
-    //         document.querySelector('#normalization-dropdown .dropdown-content');
-    //     // tslint:disable-next-line:no-any
-    //     normalizationDropdown.addEventListener('iron-activate', (event) => {
-    //         const selectedNormalizationOption = event.detail.selected;
-    //         applyNormalization(selectedNormalizationOption);
-    //         setupDatasetStats();
-    //     });
-    // }
-    // document.querySelector("#disc-optimizer-dropdown .dropdown-content")
-    //     // tslint:disable-next-line:no-any
-    //     .addEventListener('iron-activate', (event) => {
-    //         // Activate, deactivate hyper parameter inputs.
-    //         refreshHyperParamRequirements(event.detail.selected,
-    //             'disc');
-    //     });
 
-    // document.querySelector("#gen-optimizer-dropdown .dropdown-content")
-    //     // tslint:disable-next-line:no-any
-    //     .addEventListener('iron-activate', (event) => {
-    //         // Activate, deactivate hyper parameter inputs.
-    //         refreshHyperParamRequirements(event.detail.selected,
-    //             'gen');
-    //     });
+    document.querySelector('#model-dropdown').addEventListener(
+        'change', (event) => {
+            // Update the model.
 
-    discLearningRate = 0.01;
-    genLearningRate = 0.01;
-    discMomentum = 0.1;
-    genMomentum = 0.1;
-    discNeedMomentum = false;
-    genNeedMomentum = false;
-    discGamma = 0.1;
-    genGamma = 0.1;
-    discBeta1 = 0.9;
-    discBeta2 = 0.999;
-    genBeta1 = 0.9;
-    genBeta2 = 0.999;
-    discNeedGamma = false;
-    genNeedGamma = false;
-    discNeedBeta = false;
-    genNeedBeta = true;
-    batchSize = 15;
-    // Default optimizer is momentum
-    discSelectedOptimizerName = "sgd";
-    genSelectedOptimizerName = "adam";
-    optimizerNames = ["sgd", "momentum", "rmsprop",
-        "adagrad", "adadelta", "adam"
-    ];
+            const modelName = event.target.value;
+            updateSelectedModel(modelName, 'disc');
+            console.log('dis model =', modelName)
+        });
+
+
+    document.querySelector('#gen-model-dropdown').addEventListener(
+        'change', (event) => {
+            // Update the model.
+
+            const modelName = event.target.value;
+            updateSelectedModel(modelName, 'gen');
+            console.log('gen model =', modelName)
+        });
+
+    {
+        const normalizationDropdown =
+            document.querySelector('#normalization-dropdown');
+        normalizationDropdown.addEventListener('change', (event) => {
+            const selectedNormalizationOption = Number(event.target.value);
+
+            console.log('normalization =', event.target.options[selectedNormalizationOption].innerHTML);
+            applyNormalization(selectedNormalizationOption);
+            setupDatasetStats();
+        });
+    }
+
+
+    document.querySelector('#disc-optimizer-dropdown').addEventListener('change', (event) => {
+        // Activate, deactivate hyper parameter inputs.
+        refreshHyperParamRequirements(event.target.value, 'disc');
+        discSelectedOptimizerName = event.target.value;
+        console.log('disc optimizer =', event.target.value)
+    });
+
+
+
+    document.querySelector('#gen-optimizer-dropdown').addEventListener('change', (event) => {
+        // Activate, deactivate hyper parameter inputs.
+        refreshHyperParamRequirements(event.target.value, 'gen');
+        genSelectedOptimizerName = event.target.value;
+        console.log('gen optimizer =', event.target.value)
+    });
+
+
 
     applicationState = ApplicationState.IDLE;
     loadedWeights = null;
@@ -1526,20 +1557,10 @@ function run() {
         setupUploadWeightsButton();
         */
 
-    // const stopButton = document.querySelector('#stop');
-    // stopButton.addEventListener('click', () => {
-    //     applicationState = ApplicationState.IDLE;
-    //     graphRunner.stopTraining();
-    // });
-
-    // trainButton = document.querySelector('#train');
-    // trainButton.addEventListener('click', () => {
-    //     createModel();
-    //     startTraining();
-    // });
 
     document.querySelector('#environment-dropdown').addEventListener('change', (event) => {
-        updateSelectedEnvironment(event.target, graphRunner)
+        selectedEnvName = event.target.value;
+        updateSelectedEnvironment(selectedEnvName, graphRunner)
     });
 
     discHiddenLayers = [];
@@ -1551,9 +1572,9 @@ function run() {
 }
 
 
-function updateSelectedEnvironment(elt, _graphRunner = null) {
+function updateSelectedEnvironment(selectedEnvName, _graphRunner = null) {
 
-    math = (elt.value === 'GPU') ? mathGPU : mathCPU;
+    math = (selectedEnvName === 'GPU') ? mathGPU : mathCPU;
     console.log('math =', math === mathGPU ? 'mathGPU' : 'mathCPU')
     if (_graphRunner != null) {
         _graphRunner.setMath(math);
@@ -1561,6 +1582,57 @@ function updateSelectedEnvironment(elt, _graphRunner = null) {
 
 }
 
+
+var updateNetParamDisplay = function () {
+    document.getElementById('disc-learning-rate-input').value = discLearningRate;
+    document.getElementById('disc-momentum').value = discMomentum;
+    document.getElementById('gen-learning-rate-input').value = genLearningRate;
+    document.getElementById('gen-momentum').value = genMomentum;
+
+    document.getElementById('batch_size_input').value = batchSize;
+    // document.getElementById('decay_input').value = trainer.l2_decay;
+}
+
+
+// user settings
+var changeNetParam = function () {
+
+    discLearningRate = parseFloat(document.getElementById("disc-learning-rate-input").value);
+    if (graphRunner.discOptimizer != null && discLearningRate !== graphRunner.discOptimizer.learningRate) {
+        graphRunner.discOptimizer.learningRate = discLearningRate;
+
+        console.log('disc learning rate changed to' + discLearningRate);
+    }
+
+    discMomentum = parseFloat(document.getElementById("disc-momentum").value);
+    if (graphRunner.discOptimizer != null && discMomentum !== graphRunner.discOptimizer.momentum) {
+        graphRunner.discOptimizer.momentum = discMomentum;
+
+        console.log('disc momentum changed to' + discMomentum);
+    }
+
+    genLearningRate = parseFloat(document.getElementById("gen-learning-rate-input").value);
+    if (graphRunner.genOptimizer != null && genLearningRate !== graphRunner.genOptimizer.learningRate) {
+        graphRunner.genOptimizer.learningRate = genLearningRate;
+
+        console.log('gen learning rate changed to' + genLearningRate);
+    }
+
+    genMomentum = parseFloat(document.getElementById("gen-momentum").value);
+    if (graphRunner.genOptimizer != null && genMomentum !== graphRunner.genOptimizer.momentum) {
+        graphRunner.genOptimizer.momentum = genMomentum;
+
+        console.log('gen momentum changed to' + genMomentum);
+    }
+
+    batchSize = parseFloat(document.getElementById("batch_size_input").value);
+    if (graphRunner.batchSize != null && batchSize != graphRunner.batchSize) {
+        graphRunner.batchSize = batchSize;
+        console.log('batch size changed to' + batchSize);
+    }
+
+    updateNetParamDisplay();
+}
 
 var infer_request = null;
 var btn_infer = document.getElementById('buttoninfer');
