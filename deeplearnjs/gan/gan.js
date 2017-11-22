@@ -762,37 +762,28 @@ function updateSelectedDataset(datasetName) {
     genLayersContainer =
         document.querySelector('#gen-hidden-layers');
 
+    // DISC
     inputLayer = document.querySelector('#input-layer');
     insertLayerTableRow(inputLayer, 'input-layer', null, getDisplayShape(inputShape));
-    // inputLayer.outputShapeDisplay =
-    //     getDisplayShape(inputShape);
-
-    genInputLayer = document.querySelector('#gen-input-layer');
-    genInputLayer.outputShapeDisplay =
-        getDisplayShape(randVectorShape);
 
     const labelShapeDisplay =
         getDisplayShape(labelShape);
     const costLayer = document.querySelector('#cost-layer');
-    // costLayer.inputShapeDisplay = labelShapeDisplay;
-    // costLayer.outputShapeDisplay = labelShapeDisplay;
     insertLayerTableRow(costLayer, 'cost-layer', labelShapeDisplay, labelShapeDisplay);
 
-
-    const genCostLayer = document.querySelector('#gen-cost-layer');
-    // genCostLayer.inputShapeDisplay =
-    //     getDisplayShape(inputShape);
-    // genCostLayer.outputShapeDisplay =
-    //     getDisplayShape(inputShape);
-    insertLayerTableRow(genCostLayer, 'gen-cost-layer', getDisplayShape(inputShape), getDisplayShape(inputShape));
-
     const outputLayer = document.querySelector('#output-layer');
-    // outputLayer.inputShapeDisplay = labelShapeDisplay;
     insertLayerTableRow(outputLayer, 'output-layer', labelShapeDisplay, null);
 
+    // GEN
+    genInputLayer = document.querySelector('#gen-input-layer');
+    // genInputLayer.outputShapeDisplay =
+    //     getDisplayShape(randVectorShape);
+    insertLayerTableRow(genInputLayer, 'gen-input-layer', null, getDisplayShape(randVectorShape));
+
+    const genCostLayer = document.querySelector('#gen-cost-layer');
+    insertLayerTableRow(genCostLayer, 'gen-cost-layer', getDisplayShape(inputShape), getDisplayShape(inputShape));
+
     const genOutputLayer = document.querySelector('#gen-output-layer');
-    // genOutputLayer.inputShapeDisplay =
-    //     getDisplayShape(inputShape);
     insertLayerTableRow(genOutputLayer, 'gen-output-layer', labelShapeDisplay, null);
 
     buildRealImageContainer();
