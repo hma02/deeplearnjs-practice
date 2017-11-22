@@ -923,18 +923,6 @@ function run() {
     // uploadWeightsButton.addEventListener('click', () => uploadWeights());
     // setupUploadWeightsButton();
 
-    // const stopButton = document.querySelector('#stop');
-    // stopButton.addEventListener('click', () => {
-    //     applicationState = ApplicationState.IDLE;
-    //     graphRunner.stopTraining();
-    // });
-
-    // trainButton = document.querySelector('#train');
-    // trainButton.addEventListener('click', () => {
-    //     createModel();
-    //     startTraining();
-    // });
-
     document.querySelector('#environment-dropdown').addEventListener('change', (event) => {
         selectedEnvName = event.target.value;
         updateSelectedEnvironment(selectedEnvName, graphRunner)
