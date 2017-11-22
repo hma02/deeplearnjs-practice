@@ -93,6 +93,10 @@ class MyGraphRunner {
         this.currentInferenceLoopNumPasses = null;
         this.inferencePassesThisRun = null;
 
+        this.isEvaluating = null;
+        this.totalBatchesEvaluated = null;
+        this.batchesEvaluatedThisRun = null;
+
         this.trainStartTimestamp = null;
         this.lastCostTimestamp = 0;
         this.lastEvalTimestamp = 0;
@@ -109,6 +113,7 @@ class MyGraphRunner {
 
     resetStatistics() {
         this.totalBatchesTrained = 0;
+        this.totalBatchesEvaluated = 0;
         this.totalIdleTimeMs = 0;
         this.lastStopTimestamp = null;
     }
@@ -211,6 +216,91 @@ class MyGraphRunner {
 
         });
         requestAnimationFrame(() => this.trainNetwork());
+    }
+
+    evaluate(critCostTensor, genCostTensor, critTrainFeedEntries,
+        genTrainFeedEntries, batchSize, critOptimizer,
+        genOptimizer, numBatches = null,
+        costIntervalMs = DEFAULT_COST_INTERVAL_MS) {
+        this.critCostTensor = critCostTensor;
+        // this.genCostTensor = genCostTensor;
+        this.critTrainFeedEntries = critTrainFeedEntries;
+        // this.genTrainFeedEntries = genTrainFeedEntries;
+        this.batchSize = batchSize;
+        this.critOptimizer = critOptimizer;
+        // this.genOptimizer = genOptimizer;
+
+        this.costIntervalMs = costIntervalMs;
+        this.currentTrainLoopNumBatches = numBatches;
+
+        this.batchesEvaluatedThisRun = 0;
+        this.isEvaluating = true;
+        this.trainStartTimestamp = performance.now();
+        this.evaluateNetwork();
+    }
+
+    stopEvaluating() {
+        this.isEvaluating = false;
+        this.lastStopTimestamp = performance.now();
+    }
+
+    evaluateNetwork() {
+        if (this.batchesEvaluatedThisRun === this.currentTrainLoopNumBatches) {
+            this.stopEvaluating();
+        }
+
+        if (!this.isEvaluating) {
+            if (this.eventObserver.doneEvaluatingCallback != null) {
+                this.eventObserver.doneEvaluatingCallback();
+            }
+            return;
+        }
+
+        const start = performance.now();
+        const shouldComputeCost = (this.eventObserver.critCostCallback != null) &&
+            (start - this.lastCostTimestamp > this.costIntervalMs);
+        if (shouldComputeCost) {
+            this.lastCostTimestamp = start;
+        }
+
+        const costReduction =
+            shouldComputeCost ? CostReduction.MEAN : CostReduction.NONE;
+
+        this.math.scope((keep, track) => {
+            const critCost = this.session.train(
+                this.critCostTensor, this.critTrainFeedEntries, this.batchSize,
+                this.critOptimizer, costReduction);
+
+            // const genCost = this.session.train(
+            //     this.genCostTensor, this.genTrainFeedEntries, this.batchSize,
+            //     this.genOptimizer, costReduction);
+
+            if (shouldComputeCost) {
+                const trainTime = performance.now() - start;
+
+                this.eventObserver.critCostCallback(discCost);
+                // this.eventObserver.genCostCallback(genCost);
+
+                if (this.eventObserver.evaluateExamplesPerSecCallback != null) {
+                    const examplesPerSec = (this.batchSize * 1000 / trainTime);
+                    this.eventObserver.evaluateExamplesPerSecCallback(examplesPerSec);
+                }
+            }
+
+            if (this.eventObserver.totalTimeCallback != null) {
+                this.eventObserver.totalTimeCallback(
+                    (start - this.trainStartTimestamp) / 1000);
+            }
+
+            this.batchesEvaluatedThisRun++;
+            this.totalBatchesEvaluated++;
+
+            if (this.eventObserver.batchesEvaluatedCallback != null) {
+                this.eventObserver.batchesEvaluatedCallback(this.totalBatchesEvaluated);
+            }
+
+        });
+        requestAnimationFrame(() => this.evaluateNetwork());
     }
 
 
@@ -329,6 +419,10 @@ class MyGraphRunner {
 
     getTotalBatchesTrained() {
         return this.totalBatchesTrained;
+    }
+
+    getTotalBatchesEvaluated() {
+        return this.totalBatchesEvaluated;
     }
 
     getLastComputedMetric() {

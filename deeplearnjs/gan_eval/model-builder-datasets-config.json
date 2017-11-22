@@ -13,16 +13,22 @@
         }],
         "modelConfigs": {
             "Fully connected (disc)": {
-                "path": "deeplearnjs/gan/mnist-fully-connected.json"
+                "path": "deeplearnjs/gan_eval/mnist-fully-connected.json"
             },
             "Fully connected (gen)": {
-                "path": "deeplearnjs/gan/gen-mnist-fully-connected.json"
+                "path": "deeplearnjs/gan_eval/gen-mnist-fully-connected.json"
+            },
+            "Fully connected (crit)": {
+                "path": "deeplearnjs/gan_eval/mnist-fully-connected.json"
             },
             "Convolutional (disc)": {
-                "path": "deeplearnjs/gan/mnist-conv.json"
+                "path": "deeplearnjs/gan_eval/mnist-conv.json"
             },
             "Convolutional (gen)": {
-                "path": "deeplearnjs/gan/gen-mnist-conv.json"
+                "path": "deeplearnjs/gan_eval/gen-mnist-conv.json"
+            },
+            "Convolutional (crit)": {
+                "path": "deeplearnjs/gan_eval/mnist-conv.json"
             }
         }
     },
@@ -41,16 +47,16 @@
         "labelClassNames": ["T-shirt/top", "Trouser", "Pullover", "Dress", "Coat", "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot"],
         "modelConfigs": {
             "Fully connected (disc)": {
-                "path": "deeplearnjs/gan/mnist-fully-connected.json"
+                "path": "deeplearnjs/gan_eval/mnist-fully-connected.json"
             },
             "Fully connected (gen)": {
-                "path": "deeplearnjs/gan/gen-mnist-fully-connected.json"
+                "path": "deeplearnjs/gan_eval/gen-mnist-fully-connected.json"
             },
             "Convolutional (disc)": {
-                "path": "deeplearnjs/gan/mnist-conv.json"
+                "path": "deeplearnjs/gan_eval/mnist-conv.json"
             },
             "Convolutional (gen)": {
-                "path": "deeplearnjs/gan/gen-mnist-conv.json"
+                "path": "deeplearnjs/gan_eval/gen-mnist-conv.json"
             }
         }
     },

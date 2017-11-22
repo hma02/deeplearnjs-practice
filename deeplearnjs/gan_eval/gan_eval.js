@@ -100,37 +100,7 @@ var XhrDatasetConfig = dl.XhrDatasetConfig;
 var ZerosInitializer = dl.ZerosInitializer;
 
 
-// import {
-//     NDArrayImageVisualizer
-// } from './ndarray-image-visualizer';
-// import {
-//     NDArrayLogitsVisualizer
-// } from './ndarray-logits-visualizer';
-// import {
-//     PolymerElement,
-//     PolymerHTMLElement
-// } from './polymer-spec';
-
-// import {
-//     LayerBuilder,
-//     LayerWeightsDict
-// } from './layer_builder';
-// import {
-//     ModelLayer
-// } from './model-layer';
-// import * as model_builder_util from './model_builder_util';
-// import {
-//     Normalization
-// } from './tensorflow';
-// import {
-//     getRandomInputProvider
-// } from './my_input_provider';
-// import {
-//     MyGraphRunner,
-//     MyGraphRunnerEventObserver
-// } from './my_graph_runner';
-
-const DATASETS_CONFIG_JSON = 'deeplearnjs/gan/model-builder-datasets-config.json';
+const DATASETS_CONFIG_JSON = 'deeplearnjs/gan_eval/model-builder-datasets-config.json';
 
 /** How often to evaluate the model against test data. */
 const EVAL_INTERVAL_MS = 1500;
@@ -153,70 +123,12 @@ const TRAIN_TEST_RATIO = 5 / 6;
 const IMAGE_DATA_INDEX = 0;
 const LABEL_DATA_INDEX = 1;
 
-// tslint:disable-next-line:variable-name
-// export let GANPlaygroundPolymer: new() => PolymerHTMLElement = PolymerElement({
-//     is: 'gan-playground',
-//     properties: {
-//         inputShapeDisplay: String,
-//         isValid: Boolean,
-//         inferencesPerSec: Number,
-//         inferenceDuration: Number,
-//         generationsPerSec: Number,
-//         generationDuration: Number,
-//         examplesTrained: Number,
-//         examplesPerSec: Number,
-//         totalTimeSec: String,
-//         applicationState: Number,
-//         modelInitialized: Boolean,
-//         showTrainStats: Boolean,
-//         datasetDownloaded: Boolean,
-//         datasetNames: Array,
-//         selectedDatasetName: String,
-//         modelNames: Array,
-//         genModelNames: Array,
-//         discSelectedOptimizerName: String,
-//         genSelectedOptimizerName: String,
-//         optimizerNames: Array,
-//         discLearningRate: Number,
-//         genLearningRate: Number,
-//         discMomentum: Number,
-//         genMomentum: Number,
-//         discNeedMomentum: Boolean,
-//         genNeedMomentum: Boolean,
-//         discGamma: Number,
-//         genGamma: Number,
-//         discBeta1: Number,
-//         genBeta1: Number,
-//         discBeta2: Number,
-//         genBeta2: Number,
-//         discNeedGamma: Boolean,
-//         genNeedGamma: Boolean,
-//         discNeedBeta: Boolean,
-//         genNeedBeta: Boolean,
-//         batchSize: Number,
-//         selectedModelName: String,
-//         genSelectedModelName: String,
-//         selectedNormalizationOption: {
-//             type: Number,
-//             value: Normalization.NORMALIZATION_NEGATIVE_ONE_TO_ONE
-//         },
-//         // Stats
-//         showDatasetStats: Boolean,
-//         statsInputMin: Number,
-//         statsInputMax: Number,
-//         statsInputShapeDisplay: String,
-//         statsLabelShapeDisplay: String,
-//         statsExampleCount: Number,
-//     }
-// });
-
 var ApplicationState = {
     IDLE: 1,
     TRAINING: 2
 };
 
-// export class GANPlayground extends GANPlaygroundPolymer {
-// Polymer properties.
+
 var isValid;
 var totalTimeSec;
 var applicationState;
@@ -252,7 +164,9 @@ var genSelectedModelName;
 var optimizerNames;
 var discSelectedOptimizerName;
 var genSelectedOptimizerName;
+var critSelectedOptimizerName;
 var loadedWeights;
+var genLoadedWeights;
 var dataSets;
 var dataSet;
 var xhrDatasetConfigs;
@@ -310,8 +224,10 @@ var inputLayer;
 var hiddenLayers;
 
 var layersContainer;
+var critLayersContainer;
 var discHiddenLayers;
 var genHiddenLayers;
+var critHiddenLayers;
 
 var math;
 // Keep one instance of each NDArrayMath so we don't create a user-initiated
@@ -503,7 +419,7 @@ function createOptimizer(which) {
         var beta1 = genBeta1;
         var beta2 = genBeta2;
         var varName = 'generator';
-    } else {
+    } else if (which === 'disc') {
         var selectedOptimizerName = discSelectedOptimizerName;
         var learningRate = discLearningRate;
         var momentum = discMomentum;
@@ -511,6 +427,14 @@ function createOptimizer(which) {
         var beta1 = discBeta1;
         var beta2 = discBeta2;
         var varName = 'discriminator';
+    } else { // critic
+        var selectedOptimizerName = critSelectedOptimizerName;
+        var learningRate = discLearningRate;
+        var momentum = discMomentum;
+        var gamma = discGamma;
+        var beta1 = discBeta1;
+        var beta2 = discBeta2;
+        var varName = 'critic';
     }
     switch (selectedOptimizerName) {
         case 'sgd':
@@ -677,6 +601,18 @@ function createModel() {
             'discriminator', weights);
     }
 
+    // Construct critic
+    let crit1 = gen;
+    let crit2 = xTensor; // real image
+    for (let i = 0; i < critHiddenLayers.length; i++) {
+        let weights = null;
+        // if (loadedWeights != null) {
+        //     weights = loadedWeights[i];
+        // } // always need to retrain critic (which is the process of eval), never load weights for critic
+        [crit1, crit2] = critHiddenLayers[i].addLayerMultiple(g, [crit1, crit2],
+            'critic', weights);
+    }
+
     discPredictionReal = disc2;
     discPredictionFake = disc1;
     generatedImage = gen;
@@ -694,6 +630,19 @@ function createModel() {
         discPredictionFake,
         oneTensor
     );
+
+    critPredictionReal = crit2;
+    critPredictionFake = crit1;
+
+    const critLossReal = g.softmaxCrossEntropyCost(
+        critPredictionReal,
+        oneTensor
+    );
+    const critLossFake = g.softmaxCrossEntropyCost(
+        critPredictionFake,
+        zeroTensor
+    );
+    critLoss = g.add(critLossReal, critLossFake); // js loss
 
     session = new Session(g, math);
     graphRunner.setSession(session);
@@ -761,39 +710,44 @@ function updateSelectedDataset(datasetName) {
         document.querySelector('#hidden-layers');
     genLayersContainer =
         document.querySelector('#gen-hidden-layers');
+    critLayersContainer =
+        document.querySelector('#crit-hidden-layers');
 
+    // DISC
     inputLayer = document.querySelector('#input-layer');
     insertLayerTableRow(inputLayer, 'input-layer', null, getDisplayShape(inputShape));
-    // inputLayer.outputShapeDisplay =
-    //     getDisplayShape(inputShape);
-
-    genInputLayer = document.querySelector('#gen-input-layer');
-    genInputLayer.outputShapeDisplay =
-        getDisplayShape(randVectorShape);
 
     const labelShapeDisplay =
         getDisplayShape(labelShape);
     const costLayer = document.querySelector('#cost-layer');
-    // costLayer.inputShapeDisplay = labelShapeDisplay;
-    // costLayer.outputShapeDisplay = labelShapeDisplay;
     insertLayerTableRow(costLayer, 'cost-layer', labelShapeDisplay, labelShapeDisplay);
 
-
-    const genCostLayer = document.querySelector('#gen-cost-layer');
-    // genCostLayer.inputShapeDisplay =
-    //     getDisplayShape(inputShape);
-    // genCostLayer.outputShapeDisplay =
-    //     getDisplayShape(inputShape);
-    insertLayerTableRow(genCostLayer, 'gen-cost-layer', getDisplayShape(inputShape), getDisplayShape(inputShape));
-
     const outputLayer = document.querySelector('#output-layer');
-    // outputLayer.inputShapeDisplay = labelShapeDisplay;
     insertLayerTableRow(outputLayer, 'output-layer', labelShapeDisplay, null);
 
+    // GEN
+    genInputLayer = document.querySelector('#gen-input-layer');
+    // genInputLayer.outputShapeDisplay =
+    //     getDisplayShape(randVectorShape);
+    insertLayerTableRow(genInputLayer, 'gen-input-layer', null, getDisplayShape(randVectorShape));
+
+    const genCostLayer = document.querySelector('#gen-cost-layer');
+    insertLayerTableRow(genCostLayer, 'gen-cost-layer', getDisplayShape(inputShape), getDisplayShape(inputShape));
+
     const genOutputLayer = document.querySelector('#gen-output-layer');
-    // genOutputLayer.inputShapeDisplay =
-    //     getDisplayShape(inputShape);
     insertLayerTableRow(genOutputLayer, 'gen-output-layer', labelShapeDisplay, null);
+
+    // CRITIC
+    critInputLayer = document.querySelector('#crit-input-layer');
+    insertLayerTableRow(critInputLayer, 'crit-input-layer', null, getDisplayShape(inputShape));
+
+    const critCostLayer = document.querySelector('#crit-cost-layer');
+    insertLayerTableRow(critCostLayer, 'crit-cost-layer', labelShapeDisplay, labelShapeDisplay);
+
+    // const critOutputLayer = document.querySelector('#crit-output-layer');
+    // insertLayerTableRow(critOutputLayer, 'crit-output-layer', labelShapeDisplay, null);
+
+
 
     buildRealImageContainer();
     buildFakeImageContainer();
@@ -867,6 +821,7 @@ function buildFakeImageContainer() {
 function populateModelDropdown() {
     const _modelNames = ['Custom'];
     const _genModelNames = ['Custom'];
+    const _critModelNames = ['Custom'];
 
     const modelConfigs =
         xhrDatasetConfigs[selectedDatasetName].modelConfigs;
@@ -874,18 +829,23 @@ function populateModelDropdown() {
         if (modelConfigs.hasOwnProperty(modelName)) {
             if (modelName.endsWith('(disc)')) {
                 _modelNames.push(modelName);
-            } else {
+            } else if (modelName.endsWith('(gen)')) {
                 _genModelNames.push(modelName);
+            } else {
+                _critModelNames.push(modelName);
             }
         }
     }
 
     modelNames = _modelNames;
     genModelNames = _genModelNames;
+    critModelNames = _critModelNames;
     selectedModelName = modelNames[modelNames.length - 1];
     genSelectedModelName = genModelNames[genModelNames.length - 1];
+    critSelectedModelName = critModelNames[critModelNames.length - 1];
     updateSelectedModel(selectedModelName, 'disc');
     updateSelectedModel(genSelectedModelName, 'gen');
+    updateSelectedModel(critSelectedModelName, 'crit');
 }
 
 function updateSelectedModel(modelName, which) {
@@ -1024,6 +984,8 @@ function displayBatchesTrained(totalBatchesTrained) {
 
 var lossGraph = new cnnvis.Graph();
 var lossWindow = new cnnutil.Window(100);
+var critLossGraph = new cnnvis.Graph();
+var critLossWindow = new cnnutil.Window(100);
 
 function displayCost(avgCost, which) {
 
@@ -1038,6 +1000,18 @@ function displayCost(avgCost, which) {
         if (xa >= 0) { // if they are -1 it means not enough data was accumulated yet for estimates
             lossGraph.add(batchesTrained, xa);
             lossGraph.drawSelf(document.getElementById("lossgraph"));
+        }
+    } else if (which === 'crit') {
+        var cost = avgCost.get();
+        var batchesTrained = graphRunner.getTotalBatchesTrained();
+
+        critLossWindow.add(cost);
+
+        var xa = critLossWindow.get_average();
+
+        if (xa >= 0) { // if they are -1 it means not enough data was accumulated yet for estimates
+            critLossGraph.add(batchesTrained, xa);
+            critLossGraph.drawSelf(document.getElementById("critlossgraph"));
         }
     } else {
 
@@ -1209,7 +1183,7 @@ function addLayer(which) {
         modelLayer.initialize(window, lastOutputShape, which);
 
         genLayersContainer.appendChild(modelLayer.paramContainer);
-    } else {
+    } else if (which === 'disc') {
 
         const lastHiddenLayer = discHiddenLayers[discHiddenLayers.length - 1];
         const lastOutputShape = lastHiddenLayer != null ?
@@ -1220,6 +1194,16 @@ function addLayer(which) {
         modelLayer.initialize(window, lastOutputShape, which);
 
         layersContainer.appendChild(modelLayer.paramContainer);
+    } else { // critic
+        const lastHiddenLayer = critHiddenLayers[critHiddenLayers.length - 1];
+        const lastOutputShape = lastHiddenLayer != null ?
+            lastHiddenLayer.getOutputShape() :
+            inputShape;
+        critHiddenLayers.push(modelLayer);
+
+        modelLayer.initialize(window, lastOutputShape, which);
+
+        critLayersContainer.appendChild(modelLayer.paramContainer);
     }
 
 
@@ -1231,9 +1215,12 @@ function removeLayer(modelLayer, which) {
     if (which === 'gen') {
         genLayersContainer.removeChild(modelLayer.paramContainer);
         genHiddenLayers.splice(genHiddenLayers.indexOf(modelLayer), 1);
-    } else {
+    } else if (which === 'disc') {
         layersContainer.removeChild(modelLayer.paramContainer);
         discHiddenLayers.splice(discHiddenLayers.indexOf(modelLayer), 1);
+    } else {
+        critLayersContainer.removeChild(modelLayer.paramContainer);
+        critHiddenLayers.splice(critHiddenLayers.indexOf(modelLayer), 1);
     }
     layerParamChanged();
 }
@@ -1244,11 +1231,17 @@ function removeAllLayers(which) {
             genLayersContainer.removeChild(genHiddenLayers[i].paramContainer);
         }
         genHiddenLayers = [];
-    } else {
+    } else if (which === 'disc') {
         for (let i = 0; i < discHiddenLayers.length; i++) {
             layersContainer.removeChild(discHiddenLayers[i].paramContainer);
         }
         discHiddenLayers = [];
+    } else {
+        for (let i = 0; i < critHiddenLayers.length; i++) {
+            critLayersContainer.removeChild(critHiddenLayers[i].paramContainer);
+        }
+        critHiddenLayers = [];
+
     }
 
     layerParamChanged();
@@ -1276,6 +1269,16 @@ function validateModel() {
     }
     valid = valid && (genHiddenLayers.length > 0);
 
+    for (let i = 0; i < critHiddenLayers.length; ++i) {
+        valid = valid && critHiddenLayers[i].isValid();
+    }
+    if (critHiddenLayers.length > 0) {
+        const lastLayer = critHiddenLayers[critHiddenLayers.length - 1];
+        valid = valid &&
+            util.arraysEqual(labelShape, lastLayer.getOutputShape());
+    }
+    valid = valid && (critHiddenLayers.length > 0);
+
     isValid = valid;
 }
 
@@ -1289,6 +1292,11 @@ function layerParamChanged() {
     lastOutputShape = randVectorShape;
     for (let i = 0; i < genHiddenLayers.length; i++) {
         lastOutputShape = genHiddenLayers[i].setInputShape(lastOutputShape);
+    }
+
+    lastOutputShape = inputShape;
+    for (let i = 0; i < critHiddenLayers.length; i++) {
+        lastOutputShape = critHiddenLayers[i].setInputShape(lastOutputShape);
     }
 
     validateModel();
@@ -1332,9 +1340,9 @@ function setupUploadModelButton() {
         fileInput.value = '';
         const fileReader = new FileReader();
         fileReader.onload = (evt) => {
-            removeAllLayers('disc');
+            removeAllLayers('gen');
             const modelJson = fileReader.result;
-            loadModelFromJson(modelJson, 'disc');
+            loadModelFromJson(modelJson, 'gen');
         };
         fileReader.readAsText(file);
     });
@@ -1342,8 +1350,8 @@ function setupUploadModelButton() {
 
 function getModelAsJson() {
     const layerBuilders = [];
-    for (let i = 0; i < discHiddenLayers.length; i++) {
-        layerBuilders.push(discHiddenLayers[i].layerBuilder);
+    for (let i = 0; i < genHiddenLayers.length; i++) {
+        layerBuilders.push(genHiddenLayers[i].layerBuilder);
     }
     return JSON.stringify(layerBuilders);
 }
@@ -1354,9 +1362,12 @@ function loadModelFromJson(modelJson, which) {
     if (which === 'disc') {
         lastOutputShape = inputShape;
         hiddenLayers = discHiddenLayers;
-    } else {
+    } else if (which === 'gen') {
         lastOutputShape = randVectorShape;
         hiddenLayers = genHiddenLayers;
+    } else {
+        lastOutputShape = inputShape;
+        hiddenLayers = critHiddenLayers;
     }
 
     const layerBuilders = JSON.parse(modelJson);
@@ -1395,7 +1406,7 @@ function setupUploadWeightsButton() {
 }
 
 function loadWeightsFromJson(weightsJson) {
-    loadedWeights = JSON.parse(weightsJson);
+    genloadedWeights = JSON.parse(weightsJson);
 }
 
 
@@ -1435,6 +1446,7 @@ function run() {
     // Default optimizer is momentum
     discSelectedOptimizerName = "sgd";
     genSelectedOptimizerName = "adam";
+    critSelectedOptimizerName = "adam";
 
     var discOptimizerDropdown = document.getElementById("disc-optimizer-dropdown");
     var ind = indexOfDropdownOptions(discOptimizerDropdown.options, discSelectedOptimizerName)
@@ -1449,6 +1461,7 @@ function run() {
             displayBatchesTrained(batchesTrained),
         discCostCallback: (cost) => displayCost(cost, 'disc'),
         genCostCallback: (cost) => displayCost(cost, 'gen'),
+        critCostCallback: (cost) => displayCost(cost, 'crit'),
         metricCallback: (metric) => displayAccuracy(metric),
         inferenceExamplesCallback:
             (inputFeeds, inferenceOutputs) =>
@@ -1535,6 +1548,7 @@ function run() {
 
     applicationState = ApplicationState.IDLE;
     loadedWeights = null;
+    genLoadedWeights = null;
     modelInitialized = false;
     showTrainStats = false;
     showDatasetStats = false;
@@ -1562,7 +1576,7 @@ function run() {
         selectedEnvName = event.target.value;
         updateSelectedEnvironment(selectedEnvName, graphRunner)
     });
-
+    critHiddenLayers = [];
     discHiddenLayers = [];
     genHiddenLayers = [];
     examplesPerSec = 0;
@@ -1643,13 +1657,14 @@ btn_infer.addEventListener('click', () => {
     if (infer_paused) {
         btn_infer.value = 'Start Inferring';
         if (graphRunner != null) {
-            graphRunner.stopInferring();
+            graphRunner.stopInferring(); // can return quickly
         }
 
 
     } else {
 
         infer_request = true;
+        // graphRunner.startInference(); // can't return quickly, so put it outside to be monitored
         btn_infer.value = 'Pause Inferring';
 
 
@@ -1664,15 +1679,37 @@ btn_train.addEventListener('click', () => {
 
     if (train_paused) {
         if (graphRunner != null) {
-            graphRunner.stopTraining();
+            graphRunner.stopTraining(); // can return quickly
         }
         btn_train.value = 'Start Training';
 
     } else {
 
         train_request = true;
+        // graphRunner.startTraining(); // can't return quickly, so put it outside to be monitored
 
         btn_train.value = 'Pause Training';
+
+    }
+});
+
+var eval_request = null;
+var btn_eval = document.getElementById('buttoneval');
+var eval_paused = true;
+btn_eval.addEventListener('click', () => {
+    eval_paused = !eval_paused;
+
+    if (eval_paused) {
+        if (graphRunner != null) {
+            graphRunner.stopEvaluating(); // can return quickly
+        }
+        btn_train.value = 'Start Evaluating';
+
+    } else {
+
+        eval_request = true;
+        // graphRunner.startEvaluating(); // can't return quickly, so put it outside to be monitored
+        btn_train.value = 'Pause Evaluating';
 
     }
 });
@@ -1686,12 +1723,14 @@ function monitor() {
         btn_infer.value = 'Initializing Model ...'
         // btn_train.disabled = true;
         btn_train.style.visibility = 'hidden';
+        btn_eval.style.visibility = 'hidden';
 
     } else {
         if (isValid) {
 
             btn_infer.disabled = false;
             btn_train.style.visibility = 'visible';
+            btn_eval.style.visibility = 'visible';
 
             if (infer_paused) {
                 btn_infer.value = 'Start Infering'
@@ -1718,6 +1757,12 @@ function monitor() {
                 startInference();
             }
 
+            if (eval_request) {
+                eval_request = false;
+                // createModel();
+                startEvalulating();
+            }
+
         } else {
             btn_infer.className = 'btn btn-danger btn-md';
             btn_infer.disabled = true;
@@ -1740,6 +1785,7 @@ function start() {
         console.log('device & webgl supported');
         btn_infer.disabled = false;
         btn_train.disabled = false;
+        btn_eval.disabled = false;
 
         setTimeout(function () {
 
@@ -1753,6 +1799,7 @@ function start() {
         console.log('device/webgl not supported')
         btn_infer.disabled = true;
         btn_train.disabled = true;
+        btn_eval.disabled = true;
     }
 
 
