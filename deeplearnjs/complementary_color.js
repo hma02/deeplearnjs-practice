@@ -303,7 +303,6 @@ function initializeUi() {
 
 function make_plot_responsive() {
 
-    // MAKE THE PLOTS RESPONSIVE
     (function () {
         var d3 = Plotly.d3;
         var WIDTH_IN_PERCENT_OF_PARENT = 100,
@@ -316,11 +315,14 @@ function make_plot_responsive() {
                 'margin-top': (100 - HEIGHT_IN_PERCENT_OF_PARENT) / 2 + 'vh'
             });
         var nodes_to_resize = gd3[0]; //not sure why but the goods are within a nested array
-        window.onresize = function () {
+
+        function resize_plot() {
             for (var i = 0; i < nodes_to_resize.length; i++) {
                 Plotly.Plots.resize(nodes_to_resize[i]);
             }
-        };
+        }
+        resize_plot();
+        window.onresize = resize_plot;
     })();
 
 }
@@ -373,7 +375,7 @@ function create_plot3d(init_x, init_y, init_z) {
                 }
             },
             autosize: true,
-            height: 300,
+            // height: 300,
             margin: {
                 l: 2,
                 r: 2,
