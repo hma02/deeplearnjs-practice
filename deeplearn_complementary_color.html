@@ -131,13 +131,40 @@
 
             <div class="item row">
 
-                <div class="col-md-6 col-sm-6 col-xs-6">
+                <div class="col-md-4 col-sm-4 col-xs-6">
                     <input class="btn btn-primary btn-md" id="buttontp" type="submit" value="Start Training" onclick="ga('send', 'event', 'deeplearn_complementary_color', 'click', 'Start Training', 2);toggle_pause();"
                     />
 
                 </div>
 
-                <div class="col-md-6 col-sm-6 col-xs-6" id="egdiv"></div>
+                <div class="col-md-2 col-sm-2 col-xs-6" id="egdiv"></div>
+
+                <div class="col-md-6 col-sm-6 col-xs-6">
+                    <div class="form-group">
+                        <label for="noise-scale-input" class="control-label">Noise Scale to be added to Weights</label>
+                        <div class="controls">
+                            <div class="input-group">
+                                <input name="noisei" type="text" class="form-control" id="noise-scale-input" placeholder="noise scale 0.0001 ~ 2.0 ">
+                                <div class="input-group-btn">
+                                    <button class="btn btn-default" id="injectNoiseBtn" type="submit">Add</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="learning-rate-input" class="control-label">Learning Rate</label>
+                        <div class="controls">
+                            <div class="input-group">
+                                <input name="lri" type="text" class="form-control" id="learning-rate-input" placeholder="learning rate 0.0001 ~ 0.5 ">
+                                <div class="input-group-btn">
+                                    <button class="btn btn-default" id="learningRateBtn" type="submit">Change</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
 
             </div>
             <hr class="divider" />
@@ -187,7 +214,7 @@
                 <a>Color Space Trace</a>
             </h4>
 
-            <div id="graph-color" class="responsive-plot" style="min-height: 300px;"></div>
+            <div id="graph-color" class="responsive-plot"></div>
 
         </div>
 

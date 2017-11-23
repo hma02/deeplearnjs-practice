@@ -28,7 +28,7 @@ var SGDOptimizer = dl.SGDOptimizer;
 var CostReduction = dl.CostReduction;
 var Array1D = dl.Array1D;
 
-math = new NDArrayMathGPU();
+
 
 /**
  * This implementation of computing the complementary color came from an
@@ -114,42 +114,7 @@ function denormalizeColor(normalizedRgbColor) {
     return normalizedRgbColor.map(v => v * 255);
 }
 
-const rawInputs = new Array(1e5);
-for (let i = 0; i < 1e5; i++) {
-    rawInputs[i] = [
-        generateRandomChannelValue(), generateRandomChannelValue(),
-        generateRandomChannelValue()
-    ];
-}
 
-
-const graph = new Graph();
-
-// This tensor contains the input. In this case, it is a scalar.
-inputTensor = graph.placeholder('input RGB value', [3]);
-
-// This tensor contains the target.
-targetTensor = graph.placeholder('output RGB value', [3]);
-
-const inputArray =
-    rawInputs.map(c => Array1D.new(normalizeColor(c)));
-const targetArray = rawInputs.map(
-    c => Array1D.new(
-        normalizeColor(computeComplementaryColor(c))));
-
-
-const shuffledInputProviderBuilder = new InCPUMemoryShuffledInputProviderBuilder([inputArray, targetArray]);
-const [inputProvider, targetProvider] = shuffledInputProviderBuilder.getInputProviders();
-
-feedEntries = [{
-        tensor: inputTensor,
-        data: inputProvider
-    },
-    {
-        tensor: targetTensor,
-        data: targetProvider
-    }
-];
 
 
 function createFullyConnectedLayer(
@@ -160,41 +125,69 @@ function createFullyConnectedLayer(
         includeRelu ? (x) => graph.relu(x) : undefined, includeBias);
 }
 
-// Create 3 fully connected layers, each with half the number of nodes of
-// the previous layer. The first one has 16 nodes.
-let fullyConnectedLayer =
-    createFullyConnectedLayer(graph, inputTensor, 0, 64);
-
-// Create fully connected layer 1, which has 8 nodes.
-fullyConnectedLayer =
-    createFullyConnectedLayer(graph, fullyConnectedLayer, 1, 32);
-
-// Create fully connected layer 2, which has 4 nodes.
-fullyConnectedLayer =
-    createFullyConnectedLayer(graph, fullyConnectedLayer, 2, 16);
-
-
-predictionTensor =
-    createFullyConnectedLayer(graph, fullyConnectedLayer, 3, 3);
-
-costTensor =
-    graph.meanSquaredCost(targetTensor, predictionTensor);
-
-
 
 //////////////////////
 ///Train and Predict//
 //////////////////////
 
 
-session = new Session(graph, math);
+function injectNoise(feedEntries, costTensor) {
 
-var batchSize = 100;
-var initialLearningRate = 0.02
-optimizer = new SGDOptimizer(initialLearningRate);
+    class FeedDictionary {
+        /**
+         * Optionally construct a FeedDictionary from an array of entries.
+         * @param feedEntries Optional array of FeedEntry objects.
+         */
+        constructor(feedEntries = null) {
+            this.dict = {};
+            if (feedEntries) {
+                feedEntries.forEach(entry => this.dict[entry.tensor.id] = entry);
+            }
+        }
+    }
 
+    class VariableNode extends Node {
+        constructor(graph, name, data) {
+            super(graph, name, {}, new Tensor(data.shape));
+        }
+        validate() {
+            util.assert(
+                this.data != null,
+                'Error adding variable op: Data for variable \'' + this.name +
+                '\' is null or undefined');
+        }
+    }
 
-function train1Batch(shouldFetchCost) {
+    function getVariableNodesFromEvaluationSet(evaluationSet) {
+        const nodes = [];
+        evaluationSet.forEach(node => {
+            if (node instanceof VariableNode) {
+                nodes.push(node);
+            }
+        });
+        return nodes;
+    }
+
+    var feed = new FeedDictionary(feedEntries);
+    var runtime = session.getOrCreateRuntime([costTensor], feed);
+    var variableNodes = optimizer.specifiedVariableNodes == null ?
+        getVariableNodesFromEvaluationSet(runtime.nodes) :
+        this.specifiedVariableNodes;
+
+    variableNodes.forEach(node => {
+        const oldVariable = session.activationArrayMap.get(node.output);
+        // const gradient = this.variableGradients.get(node.output);
+        const noise = NDArray.randUniform(node.output.shape, -1 * noiseScale, 1 * noiseScale); // min max
+
+        const variable = math.scaledArrayAdd(this.one, noise, this.one, oldVariable);
+        session.activationArrayMap.set(node.output, keep(variable));
+        node.data = variable;
+
+        oldVariable.dispose();
+    });
+}
+
+function train1Batch(shouldFetchCost, shouldInjectNoise) {
     // Every 42 steps, lower the learning rate by 15%.
     const learningRate =
         initialLearningRate * Math.pow(0.95, Math.floor(step / 82));
@@ -207,6 +200,12 @@ function train1Batch(shouldFetchCost) {
             costTensor, feedEntries, batchSize, optimizer,
             shouldFetchCost ? CostReduction.MEAN : CostReduction.NONE);
 
+        if (shouldInjectNoise) {
+            injectNoise(feedEntries, costTensor);
+            //inject only once
+            shouldInjectNoise = false;
+        }
+
         if (!shouldFetchCost) {
             // We only train. We do not compute the cost.
             return;
@@ -216,6 +215,7 @@ function train1Batch(shouldFetchCost) {
         // from the GPU.
         costValue = cost.get();
     });
+
     return costValue;
 }
 
@@ -249,7 +249,32 @@ function populateContainerWithColor(
     container.appendChild(colorBox);
 }
 
-var UI_initialized = false
+var updateNetParamDisplay = function () {
+    document.getElementById('learning-rate-input').value = initialLearningRate;
+    document.getElementById('noise-scale-input').value = noiseScale;
+    document.getElementById('egdiv').innerHTML = 'step = ' + step;
+    // document.getElementById('batch_size_input').value = batchSize;
+    // // document.getElementById('decay_input').value = trainer.l2_decay;
+}
+
+// user settings
+var changeNetParam = function () {
+    if (noiseScale !== parseFloat(document.getElementById("noise-scale-input").value)) {
+        noiseScale = parseFloat(document.getElementById("noise-scale-input").value);
+
+        console.log('noise scale changed to' + noiseScale);
+    }
+    initialLearningRate = parseFloat(document.getElementById("learning-rate-input").value);
+    if (optimizer != null && initialLearningRate !== optimizer.learningRate) {
+        optimizer.learningRate = initialLearningRate;
+
+        console.log('learning rate changed to' + initialLearningRate);
+    }
+    updateNetParamDisplay();
+}
+
+
+
 
 function initializeUi() {
     const colorRows = document.querySelectorAll('tr[data-original-color]');
@@ -272,27 +297,12 @@ function initializeUi() {
             tds[1], complement[0], complement[1], complement[2]);
     }
 
-
-    var d = document.getElementById('egdiv');
-    d.innerHTML = 'step = ' + step;
-
     UI_initialized = true
 }
-
-// On every frame, we train and then maybe update the UI.
-let step = 0;
-
-
-var plot_exist = false
-
-var data_x = [];
-var data_y = [];
-var data_z = [];
 
 
 function make_plot_responsive() {
 
-    // MAKE THE PLOTS RESPONSIVE
     (function () {
         var d3 = Plotly.d3;
         var WIDTH_IN_PERCENT_OF_PARENT = 100,
@@ -305,11 +315,14 @@ function make_plot_responsive() {
                 'margin-top': (100 - HEIGHT_IN_PERCENT_OF_PARENT) / 2 + 'vh'
             });
         var nodes_to_resize = gd3[0]; //not sure why but the goods are within a nested array
-        window.onresize = function () {
+
+        function resize_plot() {
             for (var i = 0; i < nodes_to_resize.length; i++) {
                 Plotly.Plots.resize(nodes_to_resize[i]);
             }
-        };
+        }
+        resize_plot();
+        window.onresize = resize_plot;
     })();
 
 }
@@ -362,7 +375,7 @@ function create_plot3d(init_x, init_y, init_z) {
                 }
             },
             autosize: true,
-            height: 300,
+            // height: 300,
             margin: {
                 l: 2,
                 r: 2,
@@ -405,45 +418,6 @@ function update_plot3d(new_x, new_y, new_z) {
 }
 
 
-
-var config = {
-    type: 'line',
-    data: {
-        datasets: [{
-            data: [],
-            fill: false,
-            label: ' ',
-            // pointRadius: 0,
-            borderColor: 'rgba(75,192,192,1)',
-            backgroundColor: 'rgba(75,192,192,1)',
-            borderWidth: 1,
-            // lineTension: 0,
-            // pointHitRadius: 8
-        }]
-    },
-    options: {
-        animation: {
-            duration: 0
-        },
-        responsive: false,
-        scales: {
-            xAxes: [{
-                type: 'linear',
-                position: 'bottom'
-            }],
-            yAxes: [{
-                ticks: {
-                    min: null,
-                    callback: (label, index, labels) => {
-                        let num = Number(label).toFixed(2);
-                        return `${num}`;
-                    }
-                }
-            }]
-        }
-    }
-};
-
 function createChart(canvasId, label, data, min = 0, max = null) {
 
     const canvas = document.getElementById(canvasId);
@@ -457,11 +431,7 @@ function createChart(canvasId, label, data, min = 0, max = null) {
 
 
 }
-var chartData = []
 
-var chart = createChart('plot', 'cost', chartData, 0, chartData.y);
-chart.update();
-var chart_exist = true;
 
 
 function train_per() {
@@ -475,7 +445,7 @@ function train_per() {
     // We only fetch the cost every 10 steps because doing so requires a transfer
     // of data from the GPU.
 
-    cost = train1Batch(step % 10 === 0);
+    cost = train1Batch(step % 10 === 0, shouldInjectNoise);
 
     var d = document.getElementById('egdiv');
     d.innerHTML = 'step = ' + step;
@@ -529,7 +499,7 @@ function train_per() {
 
 
 
-var toggle_pause = function () {
+function toggle_pause() {
     paused = !paused;
     var btn = document.getElementById('buttontp');
     if (paused) {
@@ -539,30 +509,122 @@ var toggle_pause = function () {
     }
 }
 
-var update_net_param_display = function () {
-    initializeUi();
-    // document.getElementById('lr_input').value = trainer.learning_rate;
-    // document.getElementById('momentum_input').value = trainer.momentum;
-    // document.getElementById('batch_size_input').value = trainer.batch_size;
-    // document.getElementById('decay_input').value = trainer.l2_decay;
-}
-
-
-var paused = true;
-
 
 function run() {
+
+    updateNetParamDisplay();
 
     if (UI_initialized) {
         console.log('starting!');
         setInterval(train_per, 5); // lets go!
     } else {
-        update_net_param_display();
         console.log('waiting!');
         setTimeout(run, 1000); // run again after 1second
     } // keep checking
 }
 
+
+
+var chartData;
+var chart;
+var chart_exist;
+
+var paused;
+
+// On every frame, we train and then maybe update the UI.
+var step;
+
+var plot_exist;
+
+var data_x;
+var data_y;
+var data_z;
+
+var UI_initialized;
+
+
+var rawInputs;
+
+
+var math;
+
+var graph;
+
+// This tensor contains the input. In this case, it is a scalar.
+var inputTensor;
+
+// This tensor contains the target.
+var targetTensor;
+
+var inputArray;
+var targetArray;
+
+var shuffledInputProviderBuilder;
+var inputProvider;
+var targetProvider;
+
+var feedEntries;
+
+// Create 3 fully connected layers, each with half the number of nodes of
+// the previous layer. The first one has 16 nodes.
+var fullyConnectedLayer;
+
+var predictionTensor;
+
+var costTensor;
+
+var session;
+
+var batchSize;
+var initialLearningRate;
+var optimizer;
+
+var learningRateBtn;
+
+
+// helper functions and variables to inject noise
+var noiseScale;
+var shouldInjectNoise;
+var injectNoiseBtn;
+
+
+var config = {
+    type: 'line',
+    data: {
+        datasets: [{
+            data: [],
+            fill: false,
+            label: ' ',
+            // pointRadius: 0,
+            borderColor: 'rgba(75,192,192,1)',
+            backgroundColor: 'rgba(75,192,192,1)',
+            borderWidth: 1,
+            // lineTension: 0,
+            // pointHitRadius: 8
+        }]
+    },
+    options: {
+        animation: {
+            duration: 0
+        },
+        responsive: false,
+        scales: {
+            xAxes: [{
+                type: 'linear',
+                position: 'bottom'
+            }],
+            yAxes: [{
+                ticks: {
+                    min: null,
+                    callback: (label, index, labels) => {
+                        let num = Number(label).toFixed(2);
+                        return `${num}`;
+                    }
+                }
+            }]
+        }
+    }
+};
 
 function start() {
 
@@ -575,6 +637,110 @@ function start() {
         console.log('device/webgl not supported')
         document.getElementById("buttontp").disabled = true;
     }
+
+    UI_initialized = false
+    initializeUi();
+
+    chartData = []
+
+    chart = createChart('plot', 'cost', chartData, 0, chartData.y);
+    chart.update();
+    chart_exist = true;
+
+    paused = true;
+
+    // On every frame, we train and then maybe update the UI.
+    step = 0;
+
+    plot_exist = false
+
+    data_x = [];
+    data_y = [];
+    data_z = [];
+
+    rawInputs = new Array(1e5);
+    for (let i = 0; i < 1e5; i++) {
+        rawInputs[i] = [
+            generateRandomChannelValue(), generateRandomChannelValue(),
+            generateRandomChannelValue()
+        ];
+    }
+
+
+    math = new NDArrayMathGPU();
+
+    graph = new Graph();
+
+    // This tensor contains the input. In this case, it is a scalar.
+    inputTensor = graph.placeholder('input RGB value', [3]);
+
+    // This tensor contains the target.
+    targetTensor = graph.placeholder('output RGB value', [3]);
+
+    inputArray =
+        rawInputs.map(c => Array1D.new(normalizeColor(c)));
+    targetArray = rawInputs.map(
+        c => Array1D.new(
+            normalizeColor(computeComplementaryColor(c))));
+
+
+    shuffledInputProviderBuilder = new InCPUMemoryShuffledInputProviderBuilder([inputArray, targetArray]);
+    [inputProvider, targetProvider] = shuffledInputProviderBuilder.getInputProviders();
+
+    feedEntries = [{
+            tensor: inputTensor,
+            data: inputProvider
+        },
+        {
+            tensor: targetTensor,
+            data: targetProvider
+        }
+    ];
+
+    // Create 3 fully connected layers, each with half the number of nodes of
+    // the previous layer. The first one has 16 nodes.
+    fullyConnectedLayer =
+        createFullyConnectedLayer(graph, inputTensor, 0, 64);
+
+    // Create fully connected layer 1, which has 8 nodes.
+    fullyConnectedLayer =
+        createFullyConnectedLayer(graph, fullyConnectedLayer, 1, 32);
+
+    // Create fully connected layer 2, which has 4 nodes.
+    fullyConnectedLayer =
+        createFullyConnectedLayer(graph, fullyConnectedLayer, 2, 16);
+
+
+    predictionTensor =
+        createFullyConnectedLayer(graph, fullyConnectedLayer, 3, 3);
+
+    costTensor =
+        graph.meanSquaredCost(targetTensor, predictionTensor);
+
+    session = new Session(graph, math);
+
+    batchSize = 100;
+    initialLearningRate = 0.5;
+    optimizer = new SGDOptimizer(initialLearningRate);
+
+    learningRateBtn = document.getElementById("learningRateBtn");
+    learningRateBtn.addEventListener('click', () => {
+        // Activate, deactivate hyper parameter inputs.
+        changeNetParam();
+    });
+
+
+    // helper functions and variables to inject noise
+    noiseScale = 0.3;
+    shouldInjectNoise = false;
+    injectNoiseBtn = document.getElementById("injectNoiseBtn");
+    injectNoiseBtn.addEventListener('click', () => {
+        // Activate, deactivate hyper parameter inputs.
+        shouldInjectNoise = true;
+        changeNetParam();
+        console.log(`injected noise once with scale ${noiseScale}`);
+    });
+
 
     run();
 
