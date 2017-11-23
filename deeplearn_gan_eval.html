@@ -95,8 +95,8 @@
     }
 
     #dataset>div {
-        padding-left: 5px;
-        padding-right: 5px;
+        padding-left: 2px;
+        padding-right: 2px;
     }
 
     .data-stats {
@@ -109,13 +109,13 @@
 
     #model {
         border-right: 1px solid rgba(0, 0, 0, 0.1);
-        max-width: 200px;
+        max-width: 150px;
         /* position: relative; */
     }
 
     #model>div {
-        padding-left: 5px;
-        padding-right: 5px;
+        padding-left: 2px;
+        padding-right: 2px;
     }
 
 
@@ -810,14 +810,23 @@ body {
                     <div class="item row">
                         <div class="subtitle col-md-6 col-sm-6 col-xs-6">Evaluate</div>
                         <div class="col-md-6 col-sm-6 col-xs-6">
+                            <p>(Before clicking the eval button, first train the model for a while or load a pre-trained model
+                                to evaluate its samples against real images. Evaluate real images against real images not
+                                implemented yet.)</p>
                             <input class="btn btn-primary btn-md" id="buttoneval" type="submit" value="Start Evaluating" />
                         </div>
                     </div>
 
+                    <div class="train-stats-message" id="evalExamplesPerSec">Eval Examples/sec: </div>
+                    <div class="train-stats-message" id="examplesEvaluated">Examples evaluated:</div>
+                    <div class="train-stats-message" id="evalTotalTimeSec">Eval Total time: sec.</div>
                     <div class="chart-container">
                         <hr class="divider" />
                         <h5>Critic Evaluation Graph</h5>
                         <canvas id="critlossgraph"></canvas>
+                        <!-- <hr class="divider" />
+                        <h5>Eval Examples/Sec. Graph</h5>
+                        <canvas id="evalexamplespersecgraph"></canvas> -->
                     </div>
                 </div>
             </div>

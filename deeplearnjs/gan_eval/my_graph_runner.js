@@ -35,19 +35,6 @@ const DEFAULT_COST_INTERVAL_MS = 500;
 const DEFAULT_INFERENCE_EXAMPLE_INTERVAL_MS = 3000;
 
 
-// export interface MyGraphRunnerEventObserver {
-//     batchesTrainedCallback ? : (totalBatchesTrained: number) => void;
-//     discCostCallback ? : (cost: Scalar) => void;
-//     genCostCallback ? : (cost: Scalar) => void;
-//     metricCallback ? : (metric: NDArray) => void;
-//     inferenceExamplesCallback ? :
-//         (feeds: FeedEntry[][], inferenceValues: NDArray[][]) => void;
-//     inferenceExamplesPerSecCallback ? : (examplesPerSec: number) => void;
-//     trainExamplesPerSecCallback ? : (examplesPerSec: number) => void;
-//     totalTimeCallback ? : (totalTimeSec: number) => void;
-//     doneTrainingCallback ? : () => void;
-// }
-
 var MetricReduction = {
     SUM: 0,
     MEAN: 1
@@ -98,6 +85,7 @@ class MyGraphRunner {
         this.batchesEvaluatedThisRun = null;
 
         this.trainStartTimestamp = null;
+        this.evalStartTimestamp = null;
         this.lastCostTimestamp = 0;
         this.lastEvalTimestamp = 0;
 
@@ -235,7 +223,7 @@ class MyGraphRunner {
 
         this.batchesEvaluatedThisRun = 0;
         this.isEvaluating = true;
-        this.trainStartTimestamp = performance.now();
+        this.evalStartTimestamp = performance.now();
         this.evaluateNetwork();
     }
 
@@ -276,20 +264,20 @@ class MyGraphRunner {
             //     this.genOptimizer, costReduction);
 
             if (shouldComputeCost) {
-                const trainTime = performance.now() - start;
+                const evalTime = performance.now() - start;
 
-                this.eventObserver.critCostCallback(discCost);
+                this.eventObserver.critCostCallback(critCost);
                 // this.eventObserver.genCostCallback(genCost);
 
-                if (this.eventObserver.evaluateExamplesPerSecCallback != null) {
-                    const examplesPerSec = (this.batchSize * 1000 / trainTime);
-                    this.eventObserver.evaluateExamplesPerSecCallback(examplesPerSec);
+                if (this.eventObserver.evalExamplesPerSecCallback != null) {
+                    const evalExamplesPerSec = (this.batchSize * 1000 / evalTime);
+                    this.eventObserver.evalExamplesPerSecCallback(evalExamplesPerSec);
                 }
             }
 
-            if (this.eventObserver.totalTimeCallback != null) {
-                this.eventObserver.totalTimeCallback(
-                    (start - this.trainStartTimestamp) / 1000);
+            if (this.eventObserver.evalTotalTimeCallback != null) {
+                this.eventObserver.evalTotalTimeCallback(
+                    (start - this.evalStartTimestamp) / 1000);
             }
 
             this.batchesEvaluatedThisRun++;

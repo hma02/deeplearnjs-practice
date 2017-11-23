@@ -214,7 +214,9 @@ var inputShape;
 var labelShape;
 var randVectorShape;
 var examplesPerSec;
+var evalExamplesPerSec;
 var examplesTrained;
+var examplesEvaluated;
 var inferencesPerSec;
 var inferenceDuration;
 var generationsPerSec;
@@ -650,6 +652,8 @@ function createModel() {
     // startInference();
 
     modelInitialized = true;
+
+    console.log('model initialized = true');
 }
 
 function populateDatasets() {
@@ -981,6 +985,10 @@ function displayBatchesTrained(totalBatchesTrained) {
     document.getElementById("examplesTrained").innerHTML = `Examples trained: ${examplesTrained}`
 }
 
+function displayBatchesEvaluated(totalBatchesEvaluated) {
+    examplesEvaluated = batchSize * totalBatchesEvaluated;
+    document.getElementById("examplesEvaluated").innerHTML = `Examples evaluated: ${examplesEvaluated}`
+}
 
 var lossGraph = new cnnvis.Graph();
 var lossWindow = new cnnutil.Window(100);
@@ -1003,14 +1011,14 @@ function displayCost(avgCost, which) {
         }
     } else if (which === 'crit') {
         var cost = avgCost.get();
-        var batchesTrained = graphRunner.getTotalBatchesTrained();
+        var batchesEvaluated = graphRunner.getTotalBatchesEvaluated();
 
         critLossWindow.add(cost);
 
         var xa = critLossWindow.get_average();
 
         if (xa >= 0) { // if they are -1 it means not enough data was accumulated yet for estimates
-            critLossGraph.add(batchesTrained, xa);
+            critLossGraph.add(batchesEvaluated, xa);
             critLossGraph.drawSelf(document.getElementById("critlossgraph"));
         }
     } else {
@@ -1102,6 +1110,29 @@ function displayExamplesPerSec(_examplesPerSec) {
     document.getElementById("examplesPerSec").innerHTML = `Examples/sec: ${examplesPerSec}`;
 }
 
+
+// var evalExamplesPerSecGraph = new cnnvis.Graph();
+// var evalExamplesPerSecWindow = new cnnutil.Window(100);
+
+function displayEvalExamplesPerSec(_examplesPerSec) {
+
+
+    // var batchesEvaluated = graphRunner.getTotalBatchesEvaluated();
+
+    // evalExamplesPerSecWindow.add(_examplesPerSec);
+
+    // var xa = evalExamplesPerSecWindow.get_average();
+
+    // if (xa >= 0) { // if they are -1 it means not enough data was accumulated yet for estimates
+    //     evalExamplesPerSecGraph.add(batchesEvaluated, xa);
+    //     evalExamplesPerSecGraph.drawSelf(document.getElementById("evalexamplespersecgraph"));
+    // }
+
+    evalExamplesPerSec =
+        smoothExamplesPerSec(evalExamplesPerSec, _examplesPerSec);
+
+    document.getElementById("evalExamplesPerSec").innerHTML = `Examples/sec: ${evalExamplesPerSec}`;
+}
 // function displayExamplesPerSec(examplesPerSec) {
 //     examplesPerSecChartData.push({
 //         x: graphRunner.getTotalBatchesTrained(),
@@ -1459,6 +1490,8 @@ function run() {
     const eventObserver = {
         batchesTrainedCallback: (batchesTrained) =>
             displayBatchesTrained(batchesTrained),
+        batchesEvaluatedCallback: (batchesEvaluated) =>
+            displayBatchesEvaluated(batchesEvaluated),
         discCostCallback: (cost) => displayCost(cost, 'disc'),
         genCostCallback: (cost) => displayCost(cost, 'gen'),
         critCostCallback: (cost) => displayCost(cost, 'crit'),
@@ -1471,9 +1504,15 @@ function run() {
             displayInferenceExamplesPerSec(examplesPerSec),
         trainExamplesPerSecCallback: (examplesPerSec) =>
             displayExamplesPerSec(examplesPerSec),
+        evalExamplesPerSecCallback: (examplesPerSec) =>
+            displayEvalExamplesPerSec(examplesPerSec),
         totalTimeCallback: (totalTimeSec) => {
             totalTimeSec = totalTimeSec.toFixed(1);
             document.getElementById("totalTimeSec").innerHTML = `Total time: ${totalTimeSec} sec.`;
+        },
+        evalTotalTimeCallback: (totalTimeSec) => {
+            totalTimeSec = totalTimeSec.toFixed(1);
+            document.getElementById("evalTotalTimeSec").innerHTML = `Eval Total time: ${totalTimeSec} sec.`;
         },
     };
     graphRunner = new MyGraphRunner(math, session, eventObserver);
@@ -1580,6 +1619,7 @@ function run() {
     discHiddenLayers = [];
     genHiddenLayers = [];
     examplesPerSec = 0;
+    evalExamplesPerSec = 0;
     inferencesPerSec = 0;
     generationsPerSec = 0;
     randVectorShape = [100];
@@ -1730,6 +1770,7 @@ function monitor() {
 
             btn_infer.disabled = false;
             btn_train.style.visibility = 'visible';
+            // Before clicking the eval button, first train the model for a while or load a pre-trained model to evaluate its samples against real images.Evaluate real images against real images not implemented yet.
             btn_eval.style.visibility = 'visible';
 
             if (infer_paused) {
@@ -1744,11 +1785,18 @@ function monitor() {
                 btn_train.value = 'Stop Training'
             }
 
+            if (eval_paused) {
+                btn_eval.value = 'Start Evaluating'
+            } else {
+                btn_eval.value = 'Stop Evaluating'
+            }
+
 
             if (train_request) {
                 train_request = false;
                 // createModel();
                 startTraining();
+
             }
 
             if (infer_request) {

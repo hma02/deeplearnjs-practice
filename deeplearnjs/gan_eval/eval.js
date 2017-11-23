@@ -2,7 +2,7 @@ function startEvalulating() {
     const data = getImageDataOnly();
 
     // Recreate optimizer with the selected optimizer and hyperparameters.
-    critOptimizer = createOptimizer('disc'); // for js, exact same optimizer
+    critOptimizer = createOptimizer('crit'); // for js, exact same optimizer
     // genOptimizer = createOptimizer('gen');
 
     if (isValid && data != null) {
