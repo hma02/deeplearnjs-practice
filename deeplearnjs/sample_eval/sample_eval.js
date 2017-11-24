@@ -1119,8 +1119,8 @@ function run() {
             document.getElementById("evalTotalTimeSec").innerHTML = `Eval Total time: ${totalTimeSec} sec.`;
         },
     };
-    graphRunner = new MyGraphRunner(math, session, eventObserver);
-
+    graphRunner = new MyGraphRunner(math, session, eventObserver); // can do both inference and evaluate
+    // graphRunner = new ImageEvalGraphRunner(math, session, eventObserver); // can inference but can't do evaluate
     // Set up datasets.
     populateDatasets();
 
