@@ -151,6 +151,7 @@ var discPredictionReal;
 var discPredictionFake;
 var discLoss;
 var genLoss;
+var critLoss;
 var generatedImage;
 
 var datasetDownloaded;
@@ -225,9 +226,9 @@ var generationDuration;
 var inputLayer;
 var hiddenLayers;
 
-// var layersContainer;
-// var critLayersContainer;
-// var discHiddenLayers;
+var layersContainer;
+var critLayersContainer;
+var discHiddenLayers;
 var genHiddenLayers;
 var critHiddenLayers;
 
@@ -592,16 +593,16 @@ function createModel() {
     gen = g.tanh(gen);
 
     // Construct discriminator
-    // let disc1 = gen;
-    // let disc2 = xTensor;
-    // for (let i = 0; i < discHiddenLayers.length; i++) {
-    //     let weights = null;
-    //     if (loadedWeights != null) {
-    //         weights = loadedWeights[i];
-    //     }
-    //     [disc1, disc2] = discHiddenLayers[i].addLayerMultiple(g, [disc1, disc2],
-    //         'discriminator', weights);
-    // }
+    let disc1 = gen;
+    let disc2 = xTensor;
+    for (let i = 0; i < discHiddenLayers.length; i++) {
+        let weights = null;
+        if (loadedWeights != null) {
+            weights = loadedWeights[i];
+        }
+        [disc1, disc2] = discHiddenLayers[i].addLayerMultiple(g, [disc1, disc2],
+            'discriminator', weights);
+    }
 
     // Construct critic
     let crit1 = gen;
@@ -615,23 +616,23 @@ function createModel() {
             'critic', weights);
     }
 
-    // discPredictionReal = disc2;
-    // discPredictionFake = disc1;
+    discPredictionReal = disc2;
+    discPredictionFake = disc1;
     generatedImage = gen;
-    // const discLossReal = g.softmaxCrossEntropyCost(
-    //     discPredictionReal,
-    //     oneTensor
-    // );
-    // const discLossFake = g.softmaxCrossEntropyCost(
-    //     discPredictionFake,
-    //     zeroTensor
-    // );
-    // discLoss = g.add(discLossReal, discLossFake);
+    const discLossReal = g.softmaxCrossEntropyCost(
+        discPredictionReal,
+        oneTensor
+    );
+    const discLossFake = g.softmaxCrossEntropyCost(
+        discPredictionFake,
+        zeroTensor
+    );
+    discLoss = g.add(discLossReal, discLossFake);
 
-    // genLoss = g.softmaxCrossEntropyCost(
-    //     discPredictionFake,
-    //     oneTensor
-    // );
+    genLoss = g.softmaxCrossEntropyCost(
+        discPredictionFake,
+        oneTensor
+    );
 
     critPredictionReal = crit2;
     critPredictionFake = crit1;
@@ -682,7 +683,7 @@ function updateSelectedDataset(datasetName) {
         dataSet.removeNormalization(IMAGE_DATA_INDEX);
     }
 
-    // graphRunner.stopTraining();
+    graphRunner.stopTraining();
     graphRunner.stopInferring();
 
     if (dataSet != null) {
@@ -717,7 +718,7 @@ function updateSelectedDataset(datasetName) {
     // critLayersContainer =
     //     document.querySelector('#crit-hidden-layers');
 
-    // // DISC
+    // DISC
     // inputLayer = document.querySelector('#input-layer');
     // insertLayerTableRow(inputLayer, 'input-layer', null, getDisplayShape(inputShape));
 
@@ -729,7 +730,7 @@ function updateSelectedDataset(datasetName) {
     // const outputLayer = document.querySelector('#output-layer');
     // insertLayerTableRow(outputLayer, 'output-layer', labelShapeDisplay, null);
 
-    // GEN
+    // // GEN
     // genInputLayer = document.querySelector('#gen-input-layer');
     // // genInputLayer.outputShapeDisplay =
     // //     getDisplayShape(randVectorShape);
@@ -748,9 +749,6 @@ function updateSelectedDataset(datasetName) {
     // const critCostLayer = document.querySelector('#crit-cost-layer');
     // insertLayerTableRow(critCostLayer, 'crit-cost-layer', labelShapeDisplay, labelShapeDisplay);
 
-    // const critOutputLayer = document.querySelector('#crit-output-layer');
-    // insertLayerTableRow(critOutputLayer, 'crit-output-layer', labelShapeDisplay, null);
-
 
 
     buildRealImageContainer();
@@ -760,7 +758,7 @@ function updateSelectedDataset(datasetName) {
 /* Helper function for building out container for images*/
 function buildRealImageContainer() {
     const inferenceContainer =
-        document.querySelector('#real_image_container');
+        document.querySelector('#real-container');
     inferenceContainer.innerHTML = '';
     inputNDArrayVisualizers = [];
     outputNDArrayVisualizers = [];
@@ -793,7 +791,7 @@ function buildRealImageContainer() {
 
 function buildFakeImageContainer() {
     const inferenceContainer =
-        document.querySelector('#generated_good_container');
+        document.querySelector('#generated-container');
     inferenceContainer.innerHTML = '';
     fakeInputNDArrayVisualizers = [];
     fakeOutputNDArrayVisualizers = [];
@@ -811,11 +809,11 @@ function buildFakeImageContainer() {
         // inferenceExampleElement.appendChild(ndarrayImageVisualizer);
 
         // Set up the output ndarray visualizer.
-        // const ndarrayLogitsVisualizer = new NDArrayLogitsVisualizer(inferenceExampleElement, 2);
+        const ndarrayLogitsVisualizer = new NDArrayLogitsVisualizer(inferenceExampleElement, 2);
         // document.createElement('ndarray-logits-visualizer');
-        // ndarrayLogitsVisualizer.initialize(
-        //     INFERENCE_IMAGE_SIZE_PX, INFERENCE_IMAGE_SIZE_PX);
-        // fakeOutputNDArrayVisualizers.push(ndarrayLogitsVisualizer);
+        ndarrayLogitsVisualizer.initialize(
+            INFERENCE_IMAGE_SIZE_PX, INFERENCE_IMAGE_SIZE_PX);
+        fakeOutputNDArrayVisualizers.push(ndarrayLogitsVisualizer);
         // inferenceExampleElement.appendChild(ndarrayLogitsVisualizer);
 
         inferenceContainer.appendChild(inferenceExampleElement);
@@ -823,7 +821,7 @@ function buildFakeImageContainer() {
 }
 
 function populateModelDropdown() {
-    // const _modelNames = ['Custom'];
+    const _modelNames = ['Custom'];
     const _genModelNames = ['Custom'];
     const _critModelNames = ['Custom'];
 
@@ -832,7 +830,7 @@ function populateModelDropdown() {
     for (const modelName in modelConfigs) {
         if (modelConfigs.hasOwnProperty(modelName)) {
             if (modelName.endsWith('(disc)')) {
-                // _modelNames.push(modelName);
+                _modelNames.push(modelName);
             } else if (modelName.endsWith('(gen)')) {
                 _genModelNames.push(modelName);
             } else {
@@ -841,13 +839,13 @@ function populateModelDropdown() {
         }
     }
 
-    // modelNames = _modelNames;
+    modelNames = _modelNames;
     genModelNames = _genModelNames;
     critModelNames = _critModelNames;
-    // selectedModelName = modelNames[modelNames.length - 1];
+    selectedModelName = modelNames[modelNames.length - 1];
     genSelectedModelName = genModelNames[genModelNames.length - 1];
     critSelectedModelName = critModelNames[critModelNames.length - 1];
-    // updateSelectedModel(selectedModelName, 'disc');
+    updateSelectedModel(selectedModelName, 'disc');
     updateSelectedModel(genSelectedModelName, 'gen');
     updateSelectedModel(critSelectedModelName, 'crit');
 }
@@ -1079,11 +1077,11 @@ function displayInferenceExamplesPerSec(examplesPerSec) {
     generationsPerSec = inferencesPerSec;
     generationDuration = inferenceDuration;
 
-    document.getElementById("inferencesPerSec").innerHTML = `Inferences/sec: ${inferencesPerSec}`;
-    document.getElementById("inferenceDuration").innerHTML = `inference Duration: ${inferenceDuration} ms`;
+    // document.getElementById("inferencesPerSec").innerHTML = `Inferences/sec: ${inferencesPerSec}`;
+    // document.getElementById("inferenceDuration").innerHTML = `inference Duration: ${inferenceDuration} ms`;
 
-    document.getElementById("generationsPerSec").innerHTML = `Inferences/sec: ${generationsPerSec}`;
-    document.getElementById("generationDuration").innerHTML = `inference Duration: ${generationDuration} ms`;
+    // document.getElementById("generationsPerSec").innerHTML = `Inferences/sec: ${generationsPerSec}`;
+    // document.getElementById("generationDuration").innerHTML = `inference Duration: ${generationDuration} ms`;
 }
 
 
@@ -1184,18 +1182,18 @@ function displayInferenceExamplesOutput(
 
     // Draw the logits.
     for (let i = 0; i < inputFeeds.length; i++) {
-        // const realSoftmaxLogits = math.softmax(realLogits[i]);
-        // const fakeSoftmaxLogits = math.softmax(fakeLogits[i]);
+        const realSoftmaxLogits = math.softmax(realLogits[i]);
+        const fakeSoftmaxLogits = math.softmax(fakeLogits[i]);
 
-        // outputNDArrayVisualizers[i].drawLogits(
-        //     realSoftmaxLogits, realLabels[i]);
-        // fakeOutputNDArrayVisualizers[i].drawLogits(
-        //     fakeSoftmaxLogits, fakeLabels[i]);
+        outputNDArrayVisualizers[i].drawLogits(
+            realSoftmaxLogits, realLabels[i]);
+        fakeOutputNDArrayVisualizers[i].drawLogits(
+            fakeSoftmaxLogits, fakeLabels[i]);
         inputNDArrayVisualizers[i].draw();
         fakeInputNDArrayVisualizers[i].draw();
 
-        // realSoftmaxLogits.dispose();
-        // fakeSoftmaxLogits.dispose();
+        realSoftmaxLogits.dispose();
+        fakeSoftmaxLogits.dispose();
     }
 }
 
@@ -1216,13 +1214,13 @@ function addLayer(which) {
         // genLayersContainer.appendChild(modelLayer.paramContainer);
     } else if (which === 'disc') {
 
-        // const lastHiddenLayer = discHiddenLayers[discHiddenLayers.length - 1];
-        // const lastOutputShape = lastHiddenLayer != null ?
-        //     lastHiddenLayer.getOutputShape() :
-        //     inputShape;
-        // discHiddenLayers.push(modelLayer);
+        const lastHiddenLayer = discHiddenLayers[discHiddenLayers.length - 1];
+        const lastOutputShape = lastHiddenLayer != null ?
+            lastHiddenLayer.getOutputShape() :
+            inputShape;
+        discHiddenLayers.push(modelLayer);
 
-        // modelLayer.initialize(window, lastOutputShape, which);
+        modelLayer.initialize(window, lastOutputShape, which);
 
         // layersContainer.appendChild(modelLayer.paramContainer);
     } else { // critic
@@ -1244,13 +1242,13 @@ function addLayer(which) {
 
 function removeLayer(modelLayer, which) {
     if (which === 'gen') {
-        // genLayersContainer.removeChild(modelLayer.paramContainer);
+        genLayersContainer.removeChild(modelLayer.paramContainer);
         genHiddenLayers.splice(genHiddenLayers.indexOf(modelLayer), 1);
     } else if (which === 'disc') {
-        // layersContainer.removeChild(modelLayer.paramContainer);
-        // discHiddenLayers.splice(discHiddenLayers.indexOf(modelLayer), 1);
+        layersContainer.removeChild(modelLayer.paramContainer);
+        discHiddenLayers.splice(discHiddenLayers.indexOf(modelLayer), 1);
     } else {
-        // critLayersContainer.removeChild(modelLayer.paramContainer);
+        critLayersContainer.removeChild(modelLayer.paramContainer);
         critHiddenLayers.splice(critHiddenLayers.indexOf(modelLayer), 1);
     }
     layerParamChanged();
@@ -1259,17 +1257,17 @@ function removeLayer(modelLayer, which) {
 function removeAllLayers(which) {
     if (which === 'gen') {
         for (let i = 0; i < genHiddenLayers.length; i++) {
-            // genLayersContainer.removeChild(genHiddenLayers[i].paramContainer);
+            genLayersContainer.removeChild(genHiddenLayers[i].paramContainer);
         }
         genHiddenLayers = [];
     } else if (which === 'disc') {
-        // for (let i = 0; i < discHiddenLayers.length; i++) {
-        //     layersContainer.removeChild(discHiddenLayers[i].paramContainer);
-        // }
-        // discHiddenLayers = [];
+        for (let i = 0; i < discHiddenLayers.length; i++) {
+            layersContainer.removeChild(discHiddenLayers[i].paramContainer);
+        }
+        discHiddenLayers = [];
     } else {
         for (let i = 0; i < critHiddenLayers.length; i++) {
-            // critLayersContainer.removeChild(critHiddenLayers[i].paramContainer);
+            critLayersContainer.removeChild(critHiddenLayers[i].paramContainer);
         }
         critHiddenLayers = [];
 
@@ -1280,15 +1278,15 @@ function removeAllLayers(which) {
 
 function validateModel() {
     let valid = true;
-    // for (let i = 0; i < discHiddenLayers.length; ++i) {
-    //     valid = valid && discHiddenLayers[i].isValid();
-    // }
-    // if (discHiddenLayers.length > 0) {
-    //     const lastLayer = discHiddenLayers[discHiddenLayers.length - 1];
-    //     valid = valid &&
-    //         util.arraysEqual(labelShape, lastLayer.getOutputShape());
-    // }
-    // valid = valid && (discHiddenLayers.length > 0);
+    for (let i = 0; i < discHiddenLayers.length; ++i) {
+        valid = valid && discHiddenLayers[i].isValid();
+    }
+    if (discHiddenLayers.length > 0) {
+        const lastLayer = discHiddenLayers[discHiddenLayers.length - 1];
+        valid = valid &&
+            util.arraysEqual(labelShape, lastLayer.getOutputShape());
+    }
+    valid = valid && (discHiddenLayers.length > 0);
 
     for (let i = 0; i < genHiddenLayers.length; ++i) {
         valid = valid && genHiddenLayers[i].isValid();
@@ -1316,9 +1314,9 @@ function validateModel() {
 function layerParamChanged() {
     // Go through each of the model layers and propagate shapes.
     let lastOutputShape = inputShape;
-    // for (let i = 0; i < discHiddenLayers.length; i++) {
-    //     lastOutputShape = discHiddenLayers[i].setInputShape(lastOutputShape);
-    // }
+    for (let i = 0; i < discHiddenLayers.length; i++) {
+        lastOutputShape = discHiddenLayers[i].setInputShape(lastOutputShape);
+    }
 
     lastOutputShape = randVectorShape;
     for (let i = 0; i < genHiddenLayers.length; i++) {
@@ -1391,8 +1389,8 @@ function loadModelFromJson(modelJson, which) {
     var lastOutputShape;
     var hiddenLayers;
     if (which === 'disc') {
-        // lastOutputShape = inputShape;
-        // hiddenLayers = discHiddenLayers;
+        lastOutputShape = inputShape;
+        hiddenLayers = discHiddenLayers;
     } else if (which === 'gen') {
         lastOutputShape = randVectorShape;
         hiddenLayers = genHiddenLayers;
@@ -1441,25 +1439,25 @@ function loadWeightsFromJson(weightsJson) {
 }
 
 
+
 function run() {
 
-    // discLearningRate = 0.01;
-    // genLearningRate = 0.01;
-    critLearningRate = 0.01;
-    // discMomentum = 0.1;
-    // genMomentum = 0.1;
-    // discNeedMomentum = false;
-    // genNeedMomentum = false;
-    // discGamma = 0.1;
-    // genGamma = 0.1;
-    // discBeta1 = 0.9;
-    // discBeta2 = 0.999;
-    // genBeta1 = 0.9;
-    // genBeta2 = 0.999;
-    // discNeedGamma = false;
-    // genNeedGamma = false;
-    // discNeedBeta = false;
-    // genNeedBeta = true;
+    discLearningRate = 0.01;
+    genLearningRate = 0.01;
+    discMomentum = 0.1;
+    genMomentum = 0.1;
+    discNeedMomentum = false;
+    genNeedMomentum = false;
+    discGamma = 0.1;
+    genGamma = 0.1;
+    discBeta1 = 0.9;
+    discBeta2 = 0.999;
+    genBeta1 = 0.9;
+    genBeta2 = 0.999;
+    discNeedGamma = false;
+    genNeedGamma = false;
+    discNeedBeta = false;
+    genNeedBeta = true;
     batchSize = 15;
 
     updateNetParamDisplay();
@@ -1475,41 +1473,41 @@ function run() {
 
 
     // Default optimizer is momentum
-    // discSelectedOptimizerName = "sgd";
-    // genSelectedOptimizerName = "adam";
+    discSelectedOptimizerName = "sgd";
+    genSelectedOptimizerName = "adam";
     critSelectedOptimizerName = "adam";
 
     // var discOptimizerDropdown = document.getElementById("disc-optimizer-dropdown");
-    // var ind = indexOfDropdownOptions(discOptimizerDropdown.options, discSelectedOptimizerName)
+    // var ind = indexOfDropdownOptions(discOptimizerDropdown.options, discSelectedOptimizerName);
     // discOptimizerDropdown.options[ind].selected = 'selected';
 
     // var genOptimizerDropdown = document.getElementById("gen-optimizer-dropdown");
-    // var ind = indexOfDropdownOptions(genOptimizerDropdown.options, genSelectedOptimizerName)
+    // var ind = indexOfDropdownOptions(genOptimizerDropdown.options, genSelectedOptimizerName);
     // genOptimizerDropdown.options[ind].selected = 'selected';
 
     const eventObserver = {
-        // batchesTrainedCallback: (batchesTrained) =>
-        //     displayBatchesTrained(batchesTrained),
+        batchesTrainedCallback: (batchesTrained) =>
+            displayBatchesTrained(batchesTrained),
         batchesEvaluatedCallback: (batchesEvaluated) =>
             displayBatchesEvaluated(batchesEvaluated),
-        // discCostCallback: (cost) => displayCost(cost, 'disc'),
-        // genCostCallback: (cost) => displayCost(cost, 'gen'),
+        discCostCallback: (cost) => displayCost(cost, 'disc'),
+        genCostCallback: (cost) => displayCost(cost, 'gen'),
         critCostCallback: (cost) => displayCost(cost, 'crit'),
-        // metricCallback: (metric) => displayAccuracy(metric),
+        metricCallback: (metric) => displayAccuracy(metric),
         inferenceExamplesCallback:
             (inputFeeds, inferenceOutputs) =>
             displayInferenceExamplesOutput(inputFeeds, inferenceOutputs),
         //        console.log(inputFeeds, inferenceOutputs),
-        // inferenceExamplesPerSecCallback: (examplesPerSec) =>
-        //     displayInferenceExamplesPerSec(examplesPerSec),
-        // trainExamplesPerSecCallback: (examplesPerSec) =>
-        //     displayExamplesPerSec(examplesPerSec),
+        inferenceExamplesPerSecCallback: (examplesPerSec) =>
+            displayInferenceExamplesPerSec(examplesPerSec),
+        trainExamplesPerSecCallback: (examplesPerSec) =>
+            displayExamplesPerSec(examplesPerSec),
         evalExamplesPerSecCallback: (examplesPerSec) =>
             displayEvalExamplesPerSec(examplesPerSec),
-        // totalTimeCallback: (totalTimeSec) => {
-        //     totalTimeSec = totalTimeSec.toFixed(1);
-        //     document.getElementById("totalTimeSec").innerHTML = `Total time: ${totalTimeSec} sec.`;
-        // },
+        totalTimeCallback: (totalTimeSec) => {
+            totalTimeSec = totalTimeSec.toFixed(1);
+            document.getElementById("totalTimeSec").innerHTML = `Total time: ${totalTimeSec} sec.`;
+        },
         evalTotalTimeCallback: (totalTimeSec) => {
             totalTimeSec = totalTimeSec.toFixed(1);
             document.getElementById("evalTotalTimeSec").innerHTML = `Eval Total time: ${totalTimeSec} sec.`;
@@ -1616,12 +1614,12 @@ function run() {
         updateSelectedEnvironment(selectedEnvName, graphRunner)
     });
     critHiddenLayers = [];
-    // discHiddenLayers = [];
+    discHiddenLayers = [];
     genHiddenLayers = [];
-    // examplesPerSec = 0;
+    examplesPerSec = 0;
     evalExamplesPerSec = 0;
-    // inferencesPerSec = 0;
-    // generationsPerSec = 0;
+    inferencesPerSec = 0;
+    generationsPerSec = 0;
     randVectorShape = [100];
 }
 
@@ -1651,41 +1649,41 @@ var updateNetParamDisplay = function () {
 // user settings
 var changeNetParam = function () {
 
-    // discLearningRate = parseFloat(document.getElementById("disc-learning-rate-input").value);
-    // if (graphRunner.discOptimizer != null && discLearningRate !== graphRunner.discOptimizer.learningRate) {
-    //     graphRunner.discOptimizer.learningRate = discLearningRate;
+    discLearningRate = parseFloat(document.getElementById("disc-learning-rate-input").value);
+    if (graphRunner.discOptimizer != null && discLearningRate !== graphRunner.discOptimizer.learningRate) {
+        graphRunner.discOptimizer.learningRate = discLearningRate;
 
-    //     console.log('disc learning rate changed to' + discLearningRate);
-    // }
+        console.log('disc learning rate changed to' + discLearningRate);
+    }
 
-    // discMomentum = parseFloat(document.getElementById("disc-momentum").value);
-    // if (graphRunner.discOptimizer != null && discMomentum !== graphRunner.discOptimizer.momentum) {
-    //     graphRunner.discOptimizer.momentum = discMomentum;
+    discMomentum = parseFloat(document.getElementById("disc-momentum").value);
+    if (graphRunner.discOptimizer != null && discMomentum !== graphRunner.discOptimizer.momentum) {
+        graphRunner.discOptimizer.momentum = discMomentum;
 
-    //     console.log('disc momentum changed to' + discMomentum);
-    // }
+        console.log('disc momentum changed to' + discMomentum);
+    }
 
-    // genLearningRate = parseFloat(document.getElementById("gen-learning-rate-input").value);
-    // if (graphRunner.genOptimizer != null && genLearningRate !== graphRunner.genOptimizer.learningRate) {
-    //     graphRunner.genOptimizer.learningRate = genLearningRate;
+    genLearningRate = parseFloat(document.getElementById("gen-learning-rate-input").value);
+    if (graphRunner.genOptimizer != null && genLearningRate !== graphRunner.genOptimizer.learningRate) {
+        graphRunner.genOptimizer.learningRate = genLearningRate;
 
-    //     console.log('gen learning rate changed to' + genLearningRate);
-    // }
+        console.log('gen learning rate changed to' + genLearningRate);
+    }
 
-    // genMomentum = parseFloat(document.getElementById("gen-momentum").value);
-    // if (graphRunner.genOptimizer != null && genMomentum !== graphRunner.genOptimizer.momentum) {
-    //     graphRunner.genOptimizer.momentum = genMomentum;
+    genMomentum = parseFloat(document.getElementById("gen-momentum").value);
+    if (graphRunner.genOptimizer != null && genMomentum !== graphRunner.genOptimizer.momentum) {
+        graphRunner.genOptimizer.momentum = genMomentum;
 
-    //     console.log('gen momentum changed to' + genMomentum);
-    // }
+        console.log('gen momentum changed to' + genMomentum);
+    }
 
-    // batchSize = parseFloat(document.getElementById("batch_size_input").value);
-    // if (graphRunner.batchSize != null && batchSize != graphRunner.batchSize) {
-    //     graphRunner.batchSize = batchSize;
-    //     console.log('batch size changed to' + batchSize);
-    // }
+    batchSize = parseFloat(document.getElementById("batch_size_input").value);
+    if (graphRunner.batchSize != null && batchSize != graphRunner.batchSize) {
+        graphRunner.batchSize = batchSize;
+        console.log('batch size changed to' + batchSize);
+    }
 
-    // updateNetParamDisplay();
+    updateNetParamDisplay();
 }
 
 var infer_request = null;
@@ -1711,6 +1709,28 @@ btn_infer.addEventListener('click', () => {
     }
 });
 
+// var train_request = null;
+// var btn_train = document.getElementById('buttontrain');
+// var train_paused = true;
+// btn_train.addEventListener('click', () => {
+//     train_paused = !train_paused;
+
+//     if (train_paused) {
+//         if (graphRunner != null) {
+//             graphRunner.stopTraining(); // can return quickly
+//         }
+//         btn_train.value = 'Start Training';
+
+//     } else {
+
+//         train_request = true;
+//         // graphRunner.startTraining(); // can't return quickly, so put it outside to be monitored
+
+//         btn_train.value = 'Pause Training';
+
+//     }
+// });
+
 var eval_request = null;
 var btn_eval = document.getElementById('buttoneval');
 var eval_paused = true;
@@ -1721,13 +1741,13 @@ btn_eval.addEventListener('click', () => {
         if (graphRunner != null) {
             graphRunner.stopEvaluating(); // can return quickly
         }
-        btn_train.value = 'Start Evaluating';
+        btn_eval.value = 'Start Evaluating';
 
     } else {
 
         eval_request = true;
         // graphRunner.startEvaluating(); // can't return quickly, so put it outside to be monitored
-        btn_train.value = 'Pause Evaluating';
+        btn_eval.value = 'Pause Evaluating';
 
     }
 });
@@ -1757,6 +1777,11 @@ function monitor() {
                 btn_infer.value = 'Stop Infering'
             }
 
+            // if (train_paused) {
+            //     btn_train.value = 'Start Training'
+            // } else {
+            //     btn_train.value = 'Stop Training'
+            // }
 
             if (eval_paused) {
                 btn_eval.value = 'Start Evaluating'
@@ -1764,6 +1789,13 @@ function monitor() {
                 btn_eval.value = 'Stop Evaluating'
             }
 
+
+            // if (train_request) {
+            //     train_request = false;
+            //     // createModel();
+            //     startTraining();
+
+            // }
 
             if (infer_request) {
                 infer_request = false;
@@ -1815,5 +1847,7 @@ function start() {
         // btn_train.disabled = true;
         btn_eval.disabled = true;
     }
+
+
 
 }

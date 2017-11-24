@@ -289,18 +289,21 @@
             <!-- <div id="model-builder-container"> -->
             <div class="item row">
 
-                <div id="real_image_container">real images</div>
+                <div id="real-container">real images</div>
 
                 <!-- <div id="generated_bad_container">a bad generator</div> -->
 
-                <div id="generated_good_container">a good generator</div>
+                <div id="generated-container">a good generator</div>
+                <div class="train-stats-message" id="evalExamplesPerSec">Eval Examples/sec: </div>
+                <div class="train-stats-message" id="examplesEvaluated">Examples evaluated:</div>
+                <div class="train-stats-message" id="evalTotalTimeSec">Eval Total time: sec.</div>
 
                 <hr class="divider" />
 
                 <div class="chart-container">
-                    <canvas id="real_image_js_loss"></canvas>
+                    <!-- <canvas id="real_image_js_loss"></canvas> -->
                     <!-- <canvas id="bad_gen_js_loss"></canvas> -->
-                    <canvas id="good_gen_js_loss"></canvas>
+                    <canvas id="critlossgraph"></canvas>
                 </div>
 
             </div>

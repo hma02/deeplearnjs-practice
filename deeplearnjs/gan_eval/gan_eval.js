@@ -151,6 +151,7 @@ var discPredictionReal;
 var discPredictionFake;
 var discLoss;
 var genLoss;
+var critLoss;
 var generatedImage;
 
 var datasetDownloaded;
@@ -1743,13 +1744,13 @@ btn_eval.addEventListener('click', () => {
         if (graphRunner != null) {
             graphRunner.stopEvaluating(); // can return quickly
         }
-        btn_train.value = 'Start Evaluating';
+        btn_eval.value = 'Start Evaluating';
 
     } else {
 
         eval_request = true;
         // graphRunner.startEvaluating(); // can't return quickly, so put it outside to be monitored
-        btn_train.value = 'Pause Evaluating';
+        btn_eval.value = 'Pause Evaluating';
 
     }
 });
