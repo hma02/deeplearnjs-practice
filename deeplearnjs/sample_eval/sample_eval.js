@@ -77,8 +77,9 @@ const EVAL_INTERVAL_MS = 1500;
 /** How often to compute the cost. Downloading the cost stalls the GPU. */
 const COST_INTERVAL_MS = 500;
 /** How many inference examples to show when evaluating accuracy. */
-const INFERENCE_EXAMPLE_COUNT = 1;
-const INFERENCE_IMAGE_SIZE_PX = 100;
+const INFERENCE_EXAMPLE_COUNT = 9; // must be a square number
+const INFERENCE_EXAMPLE_ROWS = Math.sqrt(INFERENCE_EXAMPLE_COUNT);
+const INFERENCE_IMAGE_SIZE_PX = 50;
 /**
  * How often to show inference examples. This should be less often than
  * EVAL_INTERVAL_MS as we only show inference examples during an eval.
@@ -581,8 +582,17 @@ function buildRealImageContainer() {
     inputNDArrayVisualizers = [];
     outputNDArrayVisualizers = [];
     for (let i = 0; i < INFERENCE_EXAMPLE_COUNT; i++) {
+
+        if (i % INFERENCE_EXAMPLE_ROWS === 0 && i !== 0) {
+            console.log('linebreak')
+            linebreak = document.createElement("br");
+            inferenceContainer.appendChild(linebreak);
+        }
+
+
         const inferenceExampleElement = document.createElement('div');
         inferenceExampleElement.className = 'inference-example';
+        inferenceExampleElement.style.display = 'inline';
 
         // Set up the input visualizer.
 
@@ -604,8 +614,16 @@ function buildFakeImageContainer() {
     fakeInputNDArrayVisualizers = [];
     fakeOutputNDArrayVisualizers = [];
     for (let i = 0; i < INFERENCE_EXAMPLE_COUNT; i++) {
+
+        if (i % INFERENCE_EXAMPLE_ROWS === 0 && i !== 0) {
+            console.log('linebreak')
+            linebreak = document.createElement("br");
+            inferenceContainer.appendChild(linebreak);
+        }
+
         const inferenceExampleElement = document.createElement('div');
         inferenceExampleElement.className = 'inference-example';
+        inferenceExampleElement.style.display = 'inline';
 
         // Set up the input visualizer.
         const ndarrayImageVisualizer = new NDArrayImageVisualizer(inferenceExampleElement)
@@ -614,7 +632,6 @@ function buildFakeImageContainer() {
         ndarrayImageVisualizer.setSize(
             INFERENCE_IMAGE_SIZE_PX, INFERENCE_IMAGE_SIZE_PX);
         fakeInputNDArrayVisualizers.push(ndarrayImageVisualizer);
-
 
         inferenceContainer.appendChild(inferenceExampleElement);
     }
@@ -838,36 +855,31 @@ function smoothExamplesPerSec(
 function displayInferenceExamplesOutput(
     inputFeeds, inferenceOutputs) {
 
-    let realImages = [];
-    const realLabels = [];
-    // const realLogits = [];
-
+    // let realImages = [];
     let fakeImages = [];
-    const fakeLabels = [];
-    // const fakeLogits = [];
 
-    for (let i = 0; i < inputFeeds.length; i++) {
-        realImages.push(inputFeeds[i][0].data);
-        fakeImages.push((inferenceOutputs[0][i]));
+    for (let i = 0; i < inferenceOutputs.length; i++) {
+        // realImages.push(inputFeeds[i][0].data);
+        fakeImages.push((inferenceOutputs[i]));
 
     }
 
-    realImages =
-        dataSet.unnormalizeExamples(realImages, IMAGE_DATA_INDEX);
+    // realImages =
+    //     dataSet.unnormalizeExamples(realImages, IMAGE_DATA_INDEX);
 
     fakeImages =
         dataSet.unnormalizeExamples(fakeImages, IMAGE_DATA_INDEX);
 
     // Draw the images.
-    for (let i = 0; i < inputFeeds.length; i++) {
-        inputNDArrayVisualizers[i].saveImageDataFromNDArray(realImages[i]);
+    for (let i = 0; i < inferenceOutputs.length; i++) {
+        // inputNDArrayVisualizers[i].saveImageDataFromNDArray(realImages[i]);
         fakeInputNDArrayVisualizers[i].saveImageDataFromNDArray(fakeImages[i]);
     }
 
     // Draw the logits.
-    for (let i = 0; i < inputFeeds.length; i++) {
+    for (let i = 0; i < inferenceOutputs.length; i++) {
 
-        inputNDArrayVisualizers[i].draw();
+        // inputNDArrayVisualizers[i].draw();
         fakeInputNDArrayVisualizers[i].draw();
 
     }
@@ -1202,23 +1214,23 @@ btn_infer.addEventListener('click', () => {
     }
 });
 
-var eval_request = null;
-var btn_eval = document.getElementById('buttoneval');
-var eval_paused = true;
-btn_eval.addEventListener('click', () => {
-    eval_paused = !eval_paused;
+var eval_request1 = null;
+var btn_eval1 = document.getElementById('buttoneval1');
+var eval_paused1 = true;
+btn_eval1.addEventListener('click', () => {
+    eval_paused1 = !eval_paused1;
 
-    if (eval_paused) {
+    if (eval_paused1) {
         if (graphRunner != null) {
             graphRunner.stopEvaluating(); // can return quickly
         }
-        btn_eval.value = 'Start Evaluating';
+        btn_eval1.value = 'Start Evaluating';
 
     } else {
 
-        eval_request = true;
+        eval_request1 = true;
         // graphRunner.startEvaluating(); // can't return quickly, so put it outside to be monitored
-        btn_eval.value = 'Pause Evaluating';
+        btn_eval1.value = 'Pause Evaluating';
 
     }
 });
@@ -1232,7 +1244,7 @@ function monitor() {
         btn_infer.value = 'Initializing Model ...'
         // btn_train.disabled = true;
         // btn_train.style.visibility = 'hidden';
-        btn_eval.style.visibility = 'hidden';
+        btn_eval1.style.visibility = 'hidden';
 
     } else {
         if (isValid) {
@@ -1240,7 +1252,7 @@ function monitor() {
             btn_infer.disabled = false;
             // btn_train.style.visibility = 'visible';
             // Before clicking the eval button, first train the model for a while or load a pre-trained model to evaluate its samples against real images.Evaluate real images against real images not implemented yet.
-            btn_eval.style.visibility = 'visible';
+            btn_eval1.style.visibility = 'visible';
 
             if (infer_paused) {
                 btn_infer.value = 'Start Infering'
@@ -1248,10 +1260,10 @@ function monitor() {
                 btn_infer.value = 'Stop Infering'
             }
 
-            if (eval_paused) {
-                btn_eval.value = 'Start Evaluating'
+            if (eval_paused1) {
+                btn_eval1.value = 'Start Evaluating'
             } else {
-                btn_eval.value = 'Stop Evaluating'
+                btn_eval1.value = 'Stop Evaluating'
             }
 
             if (infer_request) {
@@ -1260,8 +1272,8 @@ function monitor() {
                 startInference();
             }
 
-            if (eval_request) {
-                eval_request = false;
+            if (eval_request1) {
+                eval_request1 = false;
                 // createModel();
                 startEvalulating();
             }
@@ -1288,7 +1300,7 @@ function start() {
         console.log('device & webgl supported');
         btn_infer.disabled = false;
         // btn_train.disabled = false;
-        btn_eval.disabled = false;
+        btn_eval1.disabled = false;
 
         setTimeout(function () {
 
@@ -1302,6 +1314,6 @@ function start() {
         console.log('device/webgl not supported')
         btn_infer.disabled = true;
         // btn_train.disabled = true;
-        btn_eval.disabled = true;
+        btn_eval1.disabled = true;
     }
 }

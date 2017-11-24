@@ -394,7 +394,9 @@ class MyGraphRunner {
 
             if (this.eventObserver.inferenceExamplesCallback != null) {
                 this.eventObserver.inferenceExamplesCallback(
-                    feeds, [genImageValues, discPredictionFakeValues, discPredictionRealValues]
+                    feeds, genImageValues
+                    // , discPredictionFakeValues, discPredictionRealValues
+
                 );
             }
             this.inferencePassesThisRun++;

@@ -196,14 +196,15 @@
     }
 
     .inference-example {
-        display: flex;
-        justify-content: flex-start;
+        /* display: flex; */
+        /* justify-content: flex-start; */
         margin-bottom: 10px;
+        margin-left: 10px
     }
 
     .inference-example>* {
-        display: table-cell;
-        vertical-align: middle;
+        /* display: table-cell; */
+        /* vertical-align: middle; */
     }
     /* ----------------------------*/
 
@@ -274,33 +275,70 @@
 
         <div class="main-wrapper">
 
-            <input class="btn btn-primary btn-md" id="buttoninfer" type="submit" value="Start Inferring" />
-
-            <input class="btn btn-primary btn-md" id="buttoneval" type="submit" value="Start Evaluating" />
-
-            <div class="form-group">
-                <label for="environment-dropdown">Environment</label>
-                <select class="form-control" id="environment-dropdown">
-                    <option value="CPU">CPU</option>
-                    <option value="GPU">GPU</option>
-                </select>
+            <div class="item row">
+                <div class="col-md-6 col-sm-6 col-xs-12">
+                    <input class="btn btn-primary btn-md" id="buttoninfer" type="submit" value="Start Inferring" />
+                </div>
+                <div class="col-md-6 col-sm-6 col-xs-12">
+                    <div class="form-group">
+                        <label for="environment-dropdown">Environment</label>
+                        <select class="form-control" id="environment-dropdown">
+                            <option value="CPU">CPU</option>
+                            <option value="GPU">GPU</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
-            <!-- <div id="model-builder-container"> -->
+            <br>
+            <br>
             <div class="item row">
 
-                <div id="real-container">real images</div>
+                <div class="col-md-6 col-sm-6 col-xs-12">
 
+                </div>
+                <div class="col-md-6 col-sm-6 col-xs-12">
+                    <input class="btn btn-primary btn-md" id="buttoneval1" type="submit" value="Start Evaluating" />
+                    <div class="train-stats-message" id="evalExamplesPerSec">Eval Examples/sec: </div>
+                    <div class="train-stats-message" id="examplesEvaluated">Examples evaluated:</div>
+                    <div class="train-stats-message" id="evalTotalTimeSec">Eval Total time: sec.</div>
+                </div>
+            </div>
+
+            <br>
+            <br>
+            <hr class="divider" />
+
+
+            <div class="item row">
+
+                <div class="col-md-6 col-sm-6 col-xs-12">
+                    <p>real images</p>
+                    <div id="real-container"></div>
+                </div>
+
+                <div class="col-md-6 col-sm-6 col-xs-12">
+                    <p>a good generator</p>
+                    <div id="generated-container"></div>
+                </div>
                 <!-- <div id="generated_bad_container">a bad generator</div> -->
 
-                <div id="generated-container">a good generator</div>
-                <div class="train-stats-message" id="evalExamplesPerSec">Eval Examples/sec: </div>
-                <div class="train-stats-message" id="examplesEvaluated">Examples evaluated:</div>
-                <div class="train-stats-message" id="evalTotalTimeSec">Eval Total time: sec.</div>
+            </div>
 
-                <hr class="divider" />
+            <br>
+            <br>
+            <hr class="divider" />
 
-                <div class="chart-container">
+            <div class="item row">
+                <div class="col-md-6 col-sm-6 col-xs-12">
+
+                    <canvas id="realimagelossgraph"></canvas>
+
+                </div>
+
+
+
+                <div class="col-md-6 col-sm-6 col-xs-12">
                     <!-- <canvas id="real_image_js_loss"></canvas> -->
                     <!-- <canvas id="bad_gen_js_loss"></canvas> -->
                     <canvas id="critlossgraph"></canvas>
