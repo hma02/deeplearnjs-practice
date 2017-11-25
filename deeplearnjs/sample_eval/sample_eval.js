@@ -64,7 +64,7 @@ var XhrDatasetConfig = dl.XhrDatasetConfig;
 var ZerosInitializer = dl.ZerosInitializer;
 
 
-const DATASETS_CONFIG_JSON = 'deeplearnjs/gan_eval/model-builder-datasets-config.json';
+const DATASETS_CONFIG_JSON = 'deeplearnjs/sample_eval/model-builder-datasets-config.json';
 
 /** How often to evaluate the model against test data. */
 const EVAL_INTERVAL_MS = 1500;
@@ -107,7 +107,7 @@ var generatedImage;
 var datasetDownloaded;
 var datasetNames;
 var selectedEnvName;
-var selectedDatasetName;
+// var selectedDatasetName;
 
 var selectedModelName;
 var genSelectedModelName;
@@ -117,7 +117,7 @@ var critSelectedOptimizerName;
 var genLoadedWeights;
 var dataSets;
 var dataSet;
-var xhrDatasetConfigs;
+// var xhrDatasetConfigs;
 
 var critLearningRate;
 
@@ -133,9 +133,9 @@ var batchSize;
 // var inputNDArrayVisualizers;
 var fakeInputNDArrayVisualizers;
 
-var inputShape;
-var labelShape;
-var randVectorShape;
+// var inputShape;
+// var labelShape;
+// var randVectorShape;
 var evalExamplesPerSec;
 var examplesEvaluated;
 
@@ -216,11 +216,13 @@ function createOptimizer(which) {
 
 // ------------------------- build model -----------------------------
 
+// this is a global function for preparing the datasets for all models within this application
 
-function populateDatasets() {
+function fetchConfig_DownloadData(fetchConfigCallback) {
     dataSets = {};
     xhr_dataset.getXhrDatasetConfig(DATASETS_CONFIG_JSON).then(
         _xhrDatasetConfigs => {
+
             for (const datasetName in _xhrDatasetConfigs) {
                 if (_xhrDatasetConfigs.hasOwnProperty(datasetName)) {
                     dataSets[datasetName] =
@@ -228,69 +230,52 @@ function populateDatasets() {
                 }
             }
             datasetNames = Object.keys(dataSets);
-            selectedDatasetName = datasetNames[0];
-            xhrDatasetConfigs = _xhrDatasetConfigs;
-            updateSelectedDataset(datasetNames[0]);
-            populateModelDropdown();
+            selectedDatasetName = datasetNames[0]; // 0: MNIST,  1: FashionMNIST 2: CIFAR10
+
+            dataSet = dataSets[selectedDatasetName];
+
+            // inputShape = dataSet.getDataShape(IMAGE_DATA_INDEX);
+            //labelShape = dataSet.getDataShape(LABEL_DATA_INDEX);
+            // labelShape = [2]; // for gan there will be only two classes: real and fake
+            // randVectorShape = [100];
+
+            fetchConfigCallback(_xhrDatasetConfigs, selectedDatasetName);
+
+            datasetDownloaded = false;
+
+            // buildRealImageContainer();
+            fakeInputNDArrayVisualizers = [];
+            buildFakeImageContainer(document.querySelector('#generated-container'), fakeInputNDArrayVisualizers);
+
+            dataSet.fetchData().then(() => {
+                dataSet.normalizeWithinBounds(IMAGE_DATA_INDEX, -1, 1);
+                datasetDownloaded = true;
+            });
+
         },
         error => {
             throw new Error('Dataset config could not be loaded: ' + error);
         });
 }
 
-function updateSelectedDataset(datasetName) {
+function populateModelDropdown(modelConfigs) {
 
-    graphRunner.stopEvaluating();
-    graphRunner.stopInferring();
+    const _genModelNames = [];
+    const _critModelNames = [];
 
-    if (dataSet != null) {
-        dataSet.dispose();
-    }
-
-    selectedDatasetName = datasetName;
-
-    dataSet = dataSets[datasetName];
-    datasetDownloaded = false;
-
-    inputShape = dataSet.getDataShape(IMAGE_DATA_INDEX);
-    //labelShape = dataSet.getDataShape(LABEL_DATA_INDEX);
-    labelShape = [2]; // for gan there will be only two classes: real and fake
-    randVectorShape = [100];
-
-    // buildRealImageContainer();
-    fakeInputNDArrayVisualizers = [];
-    buildFakeImageContainer(document.querySelector('#generated-container'), fakeInputNDArrayVisualizers);
-
-    dataSet.fetchData().then(() => {
-        dataSet.normalizeWithinBounds(IMAGE_DATA_INDEX, -1, 1);
-        datasetDownloaded = true;
-        // populateModelDropdown();
-    });
-
-}
-
-function populateModelDropdown() {
-
-    const _genModelNames = ['Custom'];
-    const _critModelNames = ['Custom'];
-
-    const modelConfigs =
-        xhrDatasetConfigs[selectedDatasetName].modelConfigs;
     for (const modelName in modelConfigs) {
-        if (modelConfigs.hasOwnProperty(modelName)) {
-            if (modelName.endsWith('(gen)')) {
-                _genModelNames.push(modelName);
-            } else {
-                _critModelNames.push(modelName);
-            }
+        if (modelName.endsWith('(gen)')) {
+            _genModelNames.push(modelName);
+        } else {
+            _critModelNames.push(modelName);
         }
     }
 
     genSelectedModelName = _genModelNames[_genModelNames.length - 1];
     critSelectedModelName = _critModelNames[_critModelNames.length - 1];
 
-    generatorNet = new Net('gen', randVectorShape, inputShape);
-    criticNet = new Net('crit', inputShape, labelShape);
+    generatorNet = new Net('gen', 'Convolutional', modelConfigs);
+    criticNet = new Net('crit', 'Convolutional', modelConfigs);
 
     function loadSuccessCallback(which) {
 
@@ -307,8 +292,8 @@ function populateModelDropdown() {
         }
     }
 
-    loadNetFromPath(xhrDatasetConfigs[selectedDatasetName].modelConfigs[genSelectedModelName].path, generatorNet, loadSuccessCallback);
-    loadNetFromPath(xhrDatasetConfigs[selectedDatasetName].modelConfigs[critSelectedModelName].path, criticNet, loadSuccessCallback);
+    loadNetFromPath(generatorNet.path, generatorNet, loadSuccessCallback);
+    loadNetFromPath(criticNet.path, criticNet, loadSuccessCallback);
 
 }
 
@@ -322,10 +307,12 @@ function populateModelDropdown() {
 var generatorNet = null;
 var criticNet = null;
 class Net { // gen or disc or critic
-    constructor(name, _inputShape, _outputShape) {
+    constructor(name, archType, modelConfigs) {
         this.name = name;
-        this._inputShape = _inputShape;
-        this._outputShape = _outputShape;
+        this.archType = archType;
+        this.path = modelConfigs[name].paths[this.archType];
+        this.inputShape = modelConfigs[name].inputShape;
+        this.outputShape = modelConfigs[name].outputShape;
         this.isValid = false;
         this.hiddenLayers = [];
     }
@@ -335,9 +322,8 @@ class Net { // gen or disc or critic
         const modelLayer = new ModelLayer(); //document.createElement('model-layer');
 
         const lastHiddenLayer = this.hiddenLayers[this.hiddenLayers.length - 1];
-        const lastOutputShape = lastHiddenLayer != null ?
-            lastHiddenLayer.getOutputShape() :
-            randVectorShape;
+
+        const lastOutputShape = lastHiddenLayer != null ? lastHiddenLayer.getOutputShape() : this.inputShape;
         this.hiddenLayers.push(modelLayer);
 
         modelLayer.initialize(window, lastOutputShape);
@@ -349,7 +335,7 @@ class Net { // gen or disc or critic
     layerParamChanged() {
         // Go through each of the model layers and propagate shapes.
 
-        let lastOutputShape = this._inputShape;
+        let lastOutputShape = this.inputShape;
 
         for (let i = 0; i < this.hiddenLayers.length; i++) {
             lastOutputShape = this.hiddenLayers[i].setInputShape(lastOutputShape);
@@ -360,7 +346,7 @@ class Net { // gen or disc or critic
         let valid = true;
 
         var HiddenLayers = this.hiddenLayers;
-        var lastLayerOutputShape = this._outputShape;
+        var lastLayerOutputShape = this.outputShape;
 
         for (let i = 0; i < HiddenLayers.length; ++i) {
             valid = valid && HiddenLayers[i].isValid();
@@ -399,7 +385,9 @@ function loadNetFromJson(modelJson, which) {
     var lastOutputShape;
     var hiddenLayers;
 
-    lastOutputShape = which._inputShape;
+    lastOutputShape = which.inputShape;
+
+    console.log('in loadnetfromjson', which.name, which.inputShape);
 
     hiddenLayers = which.hiddenLayers;
 
@@ -426,8 +414,8 @@ function createModel() {
     // Construct graph
     graph = new Graph();
     const g = graph;
-    randomTensor = g.placeholder('random', randVectorShape);
-    xTensor = g.placeholder('input', inputShape);
+    randomTensor = g.placeholder('random', generatorNet.inputShape);
+    xTensor = g.placeholder('input', generatorNet.outputShape);
     oneTensor = g.placeholder('one', [2]);
     zeroTensor = g.placeholder('zero', [2]);
 
@@ -536,7 +524,7 @@ function buildFakeImageContainer(inferenceContainer, fakeInputNDArrayVisualizers
         // Set up the input visualizer.
         const ndarrayImageVisualizer = new NDArrayImageVisualizer(inferenceExampleElement)
 
-        ndarrayImageVisualizer.setShape(inputShape);
+        ndarrayImageVisualizer.setShape(generatorNet.outputShape);
         ndarrayImageVisualizer.setSize(
             INFERENCE_IMAGE_SIZE_PX, INFERENCE_IMAGE_SIZE_PX);
         fakeInputNDArrayVisualizers.push(ndarrayImageVisualizer);
@@ -755,9 +743,13 @@ function run() {
     // genHiddenLayers = [];
     evalExamplesPerSec = 0;
 
-
+    function buildModels(xhrDatasetConfigs, selectedDatasetName) {
+        const modelConfigs = xhrDatasetConfigs[selectedDatasetName].modelConfigs;
+        populateModelDropdown(modelConfigs);
+    }
     // Set up datasets.
-    populateDatasets();
+    fetchConfig_DownloadData(buildModels);
+
 }
 
 function monitor() {

@@ -12,23 +12,29 @@
             "shape": [10]
         }],
         "modelConfigs": {
-            "Fully connected (disc)": {
-                "path": "deeplearnjs/gan_eval/mnist-fully-connected.json"
+            "disc": {
+                "inputShape": [28, 28, 1],
+                "outputShape": [2],
+                "paths": {
+                    "Fully connected": "deeplearnjs/gan_eval/mnist-fully-connected.json",
+                    "Convolutional": "deeplearnjs/gan_eval/mnist-conv.json"
+                }
             },
-            "Fully connected (gen)": {
-                "path": "deeplearnjs/gan_eval/gen-mnist-fully-connected.json"
+            "gen": {
+                "inputShape": [100],
+                "outputShape": [28, 28, 1],
+                "paths": {
+                    "Fully connected": "deeplearnjs/gan_eval/gen-mnist-fully-connected.json",
+                    "Convolutional": "deeplearnjs/gan_eval/gen-mnist-conv.json"
+                }
             },
-            "Fully connected (crit)": {
-                "path": "deeplearnjs/gan_eval/mnist-fully-connected.json"
-            },
-            "Convolutional (disc)": {
-                "path": "deeplearnjs/gan_eval/mnist-conv.json"
-            },
-            "Convolutional (gen)": {
-                "path": "deeplearnjs/gan_eval/gen-mnist-conv.json"
-            },
-            "Convolutional (crit)": {
-                "path": "deeplearnjs/gan_eval/mnist-conv.json"
+            "crit": {
+                "inputShape": [28, 28, 1],
+                "outputShape": [2],
+                "paths": {
+                    "Fully connected": "deeplearnjs/gan_eval/mnist-fully-connected.json",
+                    "Convolutional": "deeplearnjs/gan_eval/mnist-conv.json"
+                }
             }
         }
     },

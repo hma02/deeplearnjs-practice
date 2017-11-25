@@ -33,7 +33,7 @@ function startInference() {
             },
             {
                 tensor: randomTensor,
-                data: getRandomInputProvider(randVectorShape)
+                data: getRandomInputProvider(generatorNet.inputShape)
             },
             {
                 tensor: oneTensor,
@@ -92,7 +92,7 @@ function startEvalulating() {
             },
             {
                 tensor: randomTensor,
-                data: getRandomInputProvider(randVectorShape)
+                data: getRandomInputProvider(generatorNet.inputShape)
             },
             {
                 tensor: oneTensor,
@@ -106,7 +106,7 @@ function startEvalulating() {
 
         const genFeeds = [{
                 tensor: randomTensor,
-                data: getRandomInputProvider(randVectorShape)
+                data: getRandomInputProvider(generatorNet.inputShape)
             },
             {
                 tensor: oneTensor,
