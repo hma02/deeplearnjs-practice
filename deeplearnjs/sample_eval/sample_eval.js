@@ -224,76 +224,6 @@ function createOptimizer(which) {
 
 // ------------------------- build model -----------------------------
 
-function createModel() {
-    if (session != null) {
-        session.dispose();
-    }
-
-    modelInitialized = false;
-    if (isValid === false) {
-        return;
-    }
-
-    // Construct graph
-    graph = new Graph();
-    const g = graph;
-    randomTensor = g.placeholder('random', randVectorShape);
-    xTensor = g.placeholder('input', inputShape);
-    oneTensor = g.placeholder('one', [2]);
-    zeroTensor = g.placeholder('zero', [2]);
-
-    const varianceInitializer = new VarianceScalingInitializer()
-    const zerosInitializer = new ZerosInitializer()
-    const onesInitializer = new OnesInitializer();
-
-    // Construct generator
-    let gen = randomTensor;
-    for (let i = 0; i < genHiddenLayers.length; i++) {
-        let weights = null;
-        if (genLoadedWeights != null) {
-            weights = genLoadedWeights[i];
-        }
-        [gen] = genHiddenLayers[i].addLayerMultiple(g, [gen],
-            'generator', weights);
-    }
-    gen = g.tanh(gen);
-
-    // Construct critic
-    let crit1 = gen;
-    let crit2 = xTensor; // real image
-    for (let i = 0; i < critHiddenLayers.length; i++) {
-        let weights = null;
-        // if (loadedWeights != null) {
-        //     weights = loadedWeights[i];
-        // } // always need to retrain critic (which is the process of eval), never load weights for critic
-        [crit1, crit2] = critHiddenLayers[i].addLayerMultiple(g, [crit1, crit2],
-            'critic', weights);
-    }
-
-    generatedImage = gen;
-
-    critPredictionReal = crit2;
-    critPredictionFake = crit1;
-
-    const critLossReal = g.softmaxCrossEntropyCost(
-        critPredictionReal,
-        oneTensor
-    );
-    const critLossFake = g.softmaxCrossEntropyCost(
-        critPredictionFake,
-        zeroTensor
-    );
-    critLoss = g.add(critLossReal, critLossFake); // js loss
-
-    session = new Session(g, math);
-    graphRunner.setSession(session);
-
-    // startInference();
-
-    modelInitialized = true;
-
-    console.log('model initialized = true');
-}
 
 function populateDatasets() {
     dataSets = {};
@@ -340,6 +270,7 @@ function updateSelectedDataset(datasetName) {
     inputShape = dataSet.getDataShape(IMAGE_DATA_INDEX);
     //labelShape = dataSet.getDataShape(LABEL_DATA_INDEX);
     labelShape = [2]; // for gan there will be only two classes: real and fake
+    randVectorShape = [100];
 
     // buildRealImageContainer();
     fakeInputNDArrayVisualizers = [];
@@ -370,28 +301,86 @@ function populateModelDropdown() {
     generatorNet = new Net('gen', randVectorShape, inputShape);
     criticNet = new Net('crit', inputShape, labelShape);
 
-    loadModelFromPath(xhrDatasetConfigs[selectedDatasetName].modelConfigs[genSelectedModelName].path, generatorNet);
-    loadModelFromPath(xhrDatasetConfigs[selectedDatasetName].modelConfigs[critSelectedModelName].path, criticNet);
+    loadNetFromPath(xhrDatasetConfigs[selectedDatasetName].modelConfigs[genSelectedModelName].path, generatorNet);
+    loadNetFromPath(xhrDatasetConfigs[selectedDatasetName].modelConfigs[critSelectedModelName].path, criticNet);
 
 }
 
 var generatorNet = null;
 var criticNet = null;
-class Net {
+class Net { // gen or disc or critic
     constructor(name, _inputShape, _outputShape) {
         this.name = name;
         this._inputShape = _inputShape;
         this._outputShape = _outputShape;
+        this.isValid = false;
+        this.hiddenLayers = [];
+    }
+
+    addLayer() {
+
+        const modelLayer = new ModelLayer(); //document.createElement('model-layer');
+
+        const lastHiddenLayer = this.hiddenLayers[this.hiddenLayers.length - 1];
+        const lastOutputShape = lastHiddenLayer != null ?
+            lastHiddenLayer.getOutputShape() :
+            randVectorShape;
+        this.hiddenLayers.push(modelLayer);
+
+        modelLayer.initialize(window, lastOutputShape);
+        // layerParamChanged(which)
+
+        return modelLayer;
+    }
+
+    layerParamChanged() {
+        // Go through each of the model layers and propagate shapes.
+
+        let lastOutputShape = this._inputShape;
+
+        for (let i = 0; i < this.hiddenLayers.length; i++) {
+            lastOutputShape = this.hiddenLayers[i].setInputShape(lastOutputShape);
+        }
+    }
+
+    validateNet() {
+        let valid = true;
+
+        var HiddenLayers = this.hiddenLayers;
+        var lastLayerOutputShape = this._outputShape;
+
+        for (let i = 0; i < HiddenLayers.length; ++i) {
+            valid = valid && HiddenLayers[i].isValid();
+        }
+        if (HiddenLayers.length > 0) {
+            const lastLayer = HiddenLayers[HiddenLayers.length - 1];
+            valid = valid &&
+                util.arraysEqual(lastLayerOutputShape, lastLayer.getOutputShape()); // for gen ,  lastLayerOutputShape = inputShape, for critic, lastLayerOutputShape = labelShape
+        }
+
+        this.isValid = valid && (HiddenLayers.length > 0);
     }
 }
 
-function loadModelFromPath(modelPath, which) {
+function loadNetFromPath(modelPath, which) {
     const xhr = new XMLHttpRequest();
     xhr.open('GET', modelPath);
 
     xhr.onload = () => {
-        loadModelFromJson(xhr.responseText, which);
-        console.log(which.name, 'is now built');
+
+        loadNetFromJson(xhr.responseText, which);
+
+        which.layerParamChanged();
+
+        which.validateNet();
+
+        isValid = criticNet.isValid && generatorNet.isValid
+
+        console.log(`${which.name}valid`, which.isValid, 'allvalid:', isValid)
+
+        if (isValid) {
+            createModel();
+        }
     };
     xhr.onerror = (error) => {
         throw new Error(
@@ -401,93 +390,102 @@ function loadModelFromPath(modelPath, which) {
 
 }
 
-function loadModelFromJson(modelJson, which) {
+function loadNetFromJson(modelJson, which) {
     var lastOutputShape;
     var hiddenLayers;
 
     lastOutputShape = which._inputShape;
 
-    if (which.name === 'gen') {
-        // lastOutputShape = randVectorShape;
-        hiddenLayers = genHiddenLayers;
-    } else {
-        // lastOutputShape = inputShape;
-        hiddenLayers = critHiddenLayers;
-    }
+    hiddenLayers = which.hiddenLayers;
 
     const layerBuilders = JSON.parse(modelJson);
     for (let i = 0; i < layerBuilders.length; i++) {
-        const modelLayer = addLayer(which.name);
+        const modelLayer = which.addLayer();
         modelLayer.loadParamsFromLayerBuilder(lastOutputShape, layerBuilders[i]);
         lastOutputShape = hiddenLayers[i].setInputShape(lastOutputShape);
 
     }
-    isValid = validateModel(critHiddenLayers, labelShape) && validateModel(genHiddenLayers, inputShape);
+    // isValid = validateNet(criticNet.hiddenLayers, labelShape) && validateNet(generatorNet.hiddenLayers, inputShape);
 }
 
-function addLayer(which) {
 
-    const modelLayer = new ModelLayer(); //document.createElement('model-layer');
 
-    if (which === 'gen') {
-
-        const lastHiddenLayer = genHiddenLayers[genHiddenLayers.length - 1];
-        const lastOutputShape = lastHiddenLayer != null ?
-            lastHiddenLayer.getOutputShape() :
-            randVectorShape;
-        genHiddenLayers.push(modelLayer);
-
-        modelLayer.initialize(window, lastOutputShape, which);
-
-        // genLayersContainer.appendChild(modelLayer.paramContainer);
-    } else { // critic
-        const lastHiddenLayer = critHiddenLayers[critHiddenLayers.length - 1];
-        const lastOutputShape = lastHiddenLayer != null ?
-            lastHiddenLayer.getOutputShape() :
-            inputShape;
-        critHiddenLayers.push(modelLayer);
-
-        modelLayer.initialize(window, lastOutputShape, which);
-
-        // critLayersContainer.appendChild(modelLayer.paramContainer);
+function createModel() {
+    if (session != null) {
+        session.dispose();
     }
 
-    return modelLayer;
+    modelInitialized = false;
+    if (isValid === false) {
+        return;
+    }
+
+    // Construct graph
+    graph = new Graph();
+    const g = graph;
+    randomTensor = g.placeholder('random', randVectorShape);
+    xTensor = g.placeholder('input', inputShape);
+    oneTensor = g.placeholder('one', [2]);
+    zeroTensor = g.placeholder('zero', [2]);
+
+    const varianceInitializer = new VarianceScalingInitializer()
+    const zerosInitializer = new ZerosInitializer()
+    const onesInitializer = new OnesInitializer();
+
+    // Construct generator
+    let gen = randomTensor;
+    for (let i = 0; i < generatorNet.hiddenLayers.length; i++) {
+        let weights = null;
+        if (genLoadedWeights != null) {
+            weights = genLoadedWeights[i];
+        }
+        [gen] = generatorNet.hiddenLayers[i].addLayerMultiple(g, [gen],
+            'generator', weights);
+    }
+    gen = g.tanh(gen);
+
+    // Construct critic
+    let crit1 = gen;
+    let crit2 = xTensor; // real image
+    for (let i = 0; i < criticNet.hiddenLayers.length; i++) {
+        let weights = null;
+        // if (loadedWeights != null) {
+        //     weights = loadedWeights[i];
+        // } // always need to retrain critic (which is the process of eval), never load weights for critic
+        [crit1, crit2] = criticNet.hiddenLayers[i].addLayerMultiple(g, [crit1, crit2],
+            'critic', weights);
+    }
+
+    generatedImage = gen;
+
+    critPredictionReal = crit2;
+    critPredictionFake = crit1;
+
+    const critLossReal = g.softmaxCrossEntropyCost(
+        critPredictionReal,
+        oneTensor
+    );
+    const critLossFake = g.softmaxCrossEntropyCost(
+        critPredictionFake,
+        zeroTensor
+    );
+    critLoss = g.add(critLossReal, critLossFake); // js loss
+
+    session = new Session(g, math);
+    graphRunner.setSession(session);
+
+    // startInference();
+
+    modelInitialized = true;
+
+    console.log('model initialized = true');
 }
 
-function validateModel(HiddenLayers, lastLayerOutputShape) {
-    let valid = true;
 
-    for (let i = 0; i < HiddenLayers.length; ++i) {
-        valid = valid && HiddenLayers[i].isValid();
-    }
-    if (HiddenLayers.length > 0) {
-        const lastLayer = HiddenLayers[HiddenLayers.length - 1];
-        valid = valid &&
-            util.arraysEqual(lastLayerOutputShape, lastLayer.getOutputShape()); // for gen ,  lastLayerOutputShape = inputShape, for critic, lastLayerOutputShape = labelShape
-    }
 
-    return valid && (HiddenLayers.length > 0);
-}
+// --------------------  display and control  -------------------------------
 
-function layerParamChanged() {
-    // Go through each of the model layers and propagate shapes.
-    let lastOutputShape = randVectorShape;
-    for (let i = 0; i < genHiddenLayers.length; i++) {
-        lastOutputShape = genHiddenLayers[i].setInputShape(lastOutputShape);
-    }
 
-    lastOutputShape = inputShape;
-    for (let i = 0; i < critHiddenLayers.length; i++) {
-        lastOutputShape = critHiddenLayers[i].setInputShape(lastOutputShape);
-    }
-
-    isValid = validateModel(critHiddenLayers, labelShape) && validateModel(genHiddenLayers, inputShape);
-
-    if (isValid) {
-        createModel();
-    }
-}
 
 function uploadWeights() {
     (document.querySelector('#weights-file')).click();
@@ -514,8 +512,6 @@ function setupUploadWeightsButton() {
 function loadWeightsFromJson(weightsJson, which) {
     genloadedWeights = JSON.parse(weightsJson);
 }
-
-// --------------------  display and control  -------------------------------
 
 function buildFakeImageContainer(inferenceContainer, fakeInputNDArrayVisualizers) {
     // const inferenceContainer =
@@ -755,7 +751,7 @@ function run() {
     critHiddenLayers = [];
     genHiddenLayers = [];
     evalExamplesPerSec = 0;
-    randVectorShape = [100];
+
 
     // Set up datasets.
     populateDatasets();

@@ -66,9 +66,8 @@ class ModelLayer {
         this.paramContainer = null;
     }
 
-    initialize(ganPlayground, inputShape,
-        which) {
-        this.ganPlayground = ganPlayground;
+    initialize(inputShape) {
+        // this.ganPlayground = ganPlayground;
         this.paramContainer = document.createElement('div')
         // this.querySelector('.param-container');
         this.layerNames = [
@@ -169,7 +168,7 @@ class ModelLayer {
                 layerParams[i].label, initialValue, layerParams[i].setValue,
                 layerParams[i].type, layerParams[i].min, layerParams[i].max);
         }
-        this.ganPlayground.layerParamChanged();
+        // this.ganPlayground.layerParamChanged();
     }
 
     loadParamsFromLayerBuilder(
