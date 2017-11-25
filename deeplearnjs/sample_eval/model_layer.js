@@ -19,36 +19,6 @@ var dl = deeplearn;
 var Graph = dl.Graph;
 var Tensor = dl.Tensor;
 
-
-
-// import {PolymerElement, PolymerHTMLElement} from './polymer-spec';
-
-// import * as layer_builder from './layer_builder';
-// import {LayerBuilder, LayerName, LayerWeightsDict} from './layer_builder';
-// import {GANPlayground} from './gan-playground';
-// import * as model_builder_util from './model_builder_util';
-
-// tslint:disable-next-line:variable-name
-// export let ModelLayerPolymer: new() => PolymerHTMLElement = PolymerElement({
-//     is: 'model-layer',
-//     properties: {
-//         layerName: String,
-//         inputShapeDisplay: String,
-//         outputShapeDisplay: String,
-//         isStatic: {
-//             type: Boolean,
-//             value: false
-//         },
-//         layerNames: Array,
-//         selectedLayerName: String,
-//         hasError: {
-//             type: Boolean,
-//             value: false
-//         },
-//         errorMessages: Array,
-//     }
-// });
-
 class ModelLayer {
 
     constructor() {
@@ -273,34 +243,6 @@ function getLayerBuilder(
     }
     return layerBuilder;
 }
-
-// export interface LayerParam {
-//     label: string;
-//     initialValue(inputShape: number[]): number | string;
-//     type: 'number' | 'text';
-//     min ? : number;
-//     max ? : number;
-//     setValue(value: number | string): void;
-//     getValue(): number | string;
-// }
-
-// export type LayerWeightsDict = {
-//     [name: string]: number[]
-// };
-
-// export interface LayerBuilder {
-//     layerName: LayerName;
-//     getLayerParams(): LayerParam[];
-//     getOutputShape(inputShape: number[]): number[];
-//     addLayer(
-//         g: Graph, network: Tensor, inputShape: number[], index: number,
-//         weights ? : LayerWeightsDict | null): Tensor;
-//     addLayerMultiple(
-//         g: Graph, networks: Tensor[], inputShape: number[], name: string,
-//         weights ? : LayerWeightsDict | null): Tensor[];
-//     // Return null if no errors, otherwise return an array of errors.
-//     validate(inputShape: number[]): string[] | null;
-// }
 
 class FullyConnectedLayerBuilder {
 

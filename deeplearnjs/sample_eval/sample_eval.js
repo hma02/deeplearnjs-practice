@@ -139,14 +139,6 @@ var randVectorShape;
 var evalExamplesPerSec;
 var examplesEvaluated;
 
-var inputLayer;
-var hiddenLayers;
-
-// var layersContainer;
-// var critLayersContainer;
-var genHiddenLayers;
-var critHiddenLayers;
-
 var math;
 // Keep one instance of each NDArrayMath so we don't create a user-initiated
 // number of NDArrayMathGPU's.
@@ -255,17 +247,12 @@ function updateSelectedDataset(datasetName) {
     }
 
     selectedDatasetName = datasetName;
-    selectedModelName = '';
+    // selectedModelName = '';
+    // genSelectedModelName = '';
+    // critSelectedModelName = '';
     dataSet = dataSets[datasetName];
     datasetDownloaded = false;
-    showDatasetStats = false;
-
-    dataSet.fetchData().then(() => {
-        datasetDownloaded = true;
-        dataSet.normalizeWithinBounds(IMAGE_DATA_INDEX, -1, 1);
-
-        populateModelDropdown();
-    });
+    // showDatasetStats = false;
 
     inputShape = dataSet.getDataShape(IMAGE_DATA_INDEX);
     //labelShape = dataSet.getDataShape(LABEL_DATA_INDEX);
@@ -275,6 +262,15 @@ function updateSelectedDataset(datasetName) {
     // buildRealImageContainer();
     fakeInputNDArrayVisualizers = [];
     buildFakeImageContainer(document.querySelector('#generated-container'), fakeInputNDArrayVisualizers);
+
+    dataSet.fetchData().then(() => {
+        datasetDownloaded = true;
+        dataSet.normalizeWithinBounds(IMAGE_DATA_INDEX, -1, 1);
+
+        populateModelDropdown();
+    });
+
+
 }
 
 
@@ -301,8 +297,23 @@ function populateModelDropdown() {
     generatorNet = new Net('gen', randVectorShape, inputShape);
     criticNet = new Net('crit', inputShape, labelShape);
 
-    loadNetFromPath(xhrDatasetConfigs[selectedDatasetName].modelConfigs[genSelectedModelName].path, generatorNet);
-    loadNetFromPath(xhrDatasetConfigs[selectedDatasetName].modelConfigs[critSelectedModelName].path, criticNet);
+    function loadSuccessCallback(which) {
+
+        which.layerParamChanged();
+
+        which.validateNet();
+
+        isValid = criticNet.isValid && generatorNet.isValid
+
+        console.log(`${which.name}valid`, which.isValid, 'allvalid:', isValid)
+
+        if (isValid) {
+            createModel();
+        }
+    }
+
+    loadNetFromPath(xhrDatasetConfigs[selectedDatasetName].modelConfigs[genSelectedModelName].path, generatorNet, loadSuccessCallback);
+    loadNetFromPath(xhrDatasetConfigs[selectedDatasetName].modelConfigs[critSelectedModelName].path, criticNet, loadSuccessCallback);
 
 }
 
@@ -362,33 +373,25 @@ class Net { // gen or disc or critic
     }
 }
 
-function loadNetFromPath(modelPath, which) {
+
+// ----------- make those two into generic utility functions by separating global variables outside and using callback for async return ----------------
+
+
+function loadNetFromPath(modelPath, which, loadSuccessCallback) {
     const xhr = new XMLHttpRequest();
     xhr.open('GET', modelPath);
 
     xhr.onload = () => {
-
         loadNetFromJson(xhr.responseText, which);
-
-        which.layerParamChanged();
-
-        which.validateNet();
-
-        isValid = criticNet.isValid && generatorNet.isValid
-
-        console.log(`${which.name}valid`, which.isValid, 'allvalid:', isValid)
-
-        if (isValid) {
-            createModel();
-        }
+        loadSuccessCallback(which);
     };
     xhr.onerror = (error) => {
         throw new Error(
             'Model could not be fetched from ' + modelPath + ': ' + error);
     };
     xhr.send();
-
 }
+
 
 function loadNetFromJson(modelJson, which) {
     var lastOutputShape;
@@ -407,8 +410,6 @@ function loadNetFromJson(modelJson, which) {
     }
     // isValid = validateNet(criticNet.hiddenLayers, labelShape) && validateNet(generatorNet.hiddenLayers, inputShape);
 }
-
-
 
 function createModel() {
     if (session != null) {
@@ -748,8 +749,8 @@ function run() {
         selectedEnvName = event.target.value;
         updateSelectedEnvironment(selectedEnvName, graphRunner)
     });
-    critHiddenLayers = [];
-    genHiddenLayers = [];
+    // critHiddenLayers = [];
+    // genHiddenLayers = [];
     evalExamplesPerSec = 0;
 
 
