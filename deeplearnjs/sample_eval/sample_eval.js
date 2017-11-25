@@ -231,6 +231,7 @@ function populateDatasets() {
             selectedDatasetName = datasetNames[0];
             xhrDatasetConfigs = _xhrDatasetConfigs;
             updateSelectedDataset(datasetNames[0]);
+            populateModelDropdown();
         },
         error => {
             throw new Error('Dataset config could not be loaded: ' + error);
@@ -247,12 +248,9 @@ function updateSelectedDataset(datasetName) {
     }
 
     selectedDatasetName = datasetName;
-    // selectedModelName = '';
-    // genSelectedModelName = '';
-    // critSelectedModelName = '';
+
     dataSet = dataSets[datasetName];
     datasetDownloaded = false;
-    // showDatasetStats = false;
 
     inputShape = dataSet.getDataShape(IMAGE_DATA_INDEX);
     //labelShape = dataSet.getDataShape(LABEL_DATA_INDEX);
@@ -264,15 +262,12 @@ function updateSelectedDataset(datasetName) {
     buildFakeImageContainer(document.querySelector('#generated-container'), fakeInputNDArrayVisualizers);
 
     dataSet.fetchData().then(() => {
-        datasetDownloaded = true;
         dataSet.normalizeWithinBounds(IMAGE_DATA_INDEX, -1, 1);
-
-        populateModelDropdown();
+        datasetDownloaded = true;
+        // populateModelDropdown();
     });
 
-
 }
-
 
 function populateModelDropdown() {
 
@@ -316,6 +311,13 @@ function populateModelDropdown() {
     loadNetFromPath(xhrDatasetConfigs[selectedDatasetName].modelConfigs[critSelectedModelName].path, criticNet, loadSuccessCallback);
 
 }
+
+// class Model {
+//     constructor(data) {
+
+//     }
+
+// }
 
 var generatorNet = null;
 var criticNet = null;
@@ -374,8 +376,8 @@ class Net { // gen or disc or critic
 }
 
 
-// ----------- make those two into generic utility functions by separating global variables outside and using callback for async return ----------------
-
+// refactor those two load functions into generic utility functions by separating  
+// global variables outside and using callback for async return
 
 function loadNetFromPath(modelPath, which, loadSuccessCallback) {
     const xhr = new XMLHttpRequest();
@@ -760,50 +762,52 @@ function run() {
 
 function monitor() {
 
-    if (modelInitialized == false) {
-
+    if (datasetDownloaded == false) {
         btn_infer.disabled = true;
-        btn_infer.value = 'Initializing Model ...'
-        // btn_train.disabled = true;
-        // btn_train.style.visibility = 'hidden';
+        btn_infer.value = 'Downloading data'
         btn_eval.style.visibility = 'hidden';
 
     } else {
-        if (isValid) {
+        if (modelInitialized) {
+            if (isValid) {
 
-            btn_infer.disabled = false;
-            // btn_train.style.visibility = 'visible';
-            // Before clicking the eval button, first train the model for a while or load a pre-trained model to evaluate its samples against real images.Evaluate real images against real images not implemented yet.
-            btn_eval.style.visibility = 'visible';
+                btn_infer.disabled = false;
+                // Before clicking the eval button, first load a pre-trained model to evaluate its samples against real images.Evaluate real images against real images not implemented yet.
+                btn_eval.style.visibility = 'visible';
 
-            if (infer_paused) {
-                btn_infer.value = 'Start Infering'
+                if (infer_paused) {
+                    btn_infer.value = 'Start Infering'
+                } else {
+                    btn_infer.value = 'Stop Infering'
+                }
+
+                if (eval_paused) {
+                    btn_eval.value = 'Start Evaluating'
+                } else {
+                    btn_eval.value = 'Stop Evaluating'
+                }
+
+                if (infer_request) {
+                    infer_request = false;
+                    // createModel();
+                    startInference();
+                }
+
+                if (eval_request) {
+                    eval_request = false;
+                    // createModel();
+                    startEvalulating();
+                }
+
             } else {
-                btn_infer.value = 'Stop Infering'
+                btn_infer.className = 'btn btn-danger btn-md';
+                btn_infer.disabled = true;
+                btn_infer.value = 'Model not valid'
+                btn_eval.style.visibility = 'hidden';
             }
-
-            if (eval_paused) {
-                btn_eval.value = 'Start Evaluating'
-            } else {
-                btn_eval.value = 'Stop Evaluating'
-            }
-
-            if (infer_request) {
-                infer_request = false;
-                // createModel();
-                startInference();
-            }
-
-            if (eval_request) {
-                eval_request = false;
-                // createModel();
-                startEvalulating();
-            }
-
         } else {
-            btn_infer.className = 'btn btn-danger btn-md';
             btn_infer.disabled = true;
-            btn_infer.value = 'Model not valid'
+            btn_infer.value = 'Initializing Model ...'
             btn_eval.style.visibility = 'hidden';
         }
     }
