@@ -367,9 +367,22 @@ function populateModelDropdown() {
     genSelectedModelName = _genModelNames[_genModelNames.length - 1];
     critSelectedModelName = _critModelNames[_critModelNames.length - 1];
 
-    loadModelFromPath(xhrDatasetConfigs[selectedDatasetName].modelConfigs[genSelectedModelName].path, 'gen');
-    loadModelFromPath(xhrDatasetConfigs[selectedDatasetName].modelConfigs[critSelectedModelName].path, 'crit');
+    generatorNet = new Net('gen', randVectorShape, inputShape);
+    criticNet = new Net('crit', inputShape, labelShape);
 
+    loadModelFromPath(xhrDatasetConfigs[selectedDatasetName].modelConfigs[genSelectedModelName].path, generatorNet);
+    loadModelFromPath(xhrDatasetConfigs[selectedDatasetName].modelConfigs[critSelectedModelName].path, criticNet);
+
+}
+
+var generatorNet = null;
+var criticNet = null;
+class Net {
+    constructor(name, _inputShape, _outputShape) {
+        this.name = name;
+        this._inputShape = _inputShape;
+        this._outputShape = _outputShape;
+    }
 }
 
 function loadModelFromPath(modelPath, which) {
@@ -378,7 +391,7 @@ function loadModelFromPath(modelPath, which) {
 
     xhr.onload = () => {
         loadModelFromJson(xhr.responseText, which);
-        console.log(which, 'is now built');
+        console.log(which.name, 'is now built');
     };
     xhr.onerror = (error) => {
         throw new Error(
@@ -391,17 +404,20 @@ function loadModelFromPath(modelPath, which) {
 function loadModelFromJson(modelJson, which) {
     var lastOutputShape;
     var hiddenLayers;
-    if (which === 'gen') {
-        lastOutputShape = randVectorShape;
+
+    lastOutputShape = which._inputShape;
+
+    if (which.name === 'gen') {
+        // lastOutputShape = randVectorShape;
         hiddenLayers = genHiddenLayers;
     } else {
-        lastOutputShape = inputShape;
+        // lastOutputShape = inputShape;
         hiddenLayers = critHiddenLayers;
     }
 
     const layerBuilders = JSON.parse(modelJson);
     for (let i = 0; i < layerBuilders.length; i++) {
-        const modelLayer = addLayer(which);
+        const modelLayer = addLayer(which.name);
         modelLayer.loadParamsFromLayerBuilder(lastOutputShape, layerBuilders[i]);
         lastOutputShape = hiddenLayers[i].setInputShape(lastOutputShape);
 
