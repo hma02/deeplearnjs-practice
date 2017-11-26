@@ -300,7 +300,8 @@ class FullyConnectedLayerBuilder {
         let b;
 
         if (weights != null) {
-            throw new Error;
+            w = Array2D.new(wShape, weights['W']);
+            b = Array1D.new(weights['b']);
         } else {
             w = Array2D.randTruncatedNormal(wShape, 0, 0.1);
             b = Array1D.zeros([this.hiddenUnits]);

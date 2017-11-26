@@ -58,6 +58,11 @@ function uploadWeights() {
     (document.querySelector('#weights-file')).click();
 }
 
+
+function loadWeightsFromJson(weightsJson, model) {
+    model.genloadedWeights = JSON.parse(weightsJson);
+}
+
 function setupUploadWeightsButton(fileInput, model) {
     // Show and setup the load view button.
     // const fileInput = document.querySelector('#weights-file');
@@ -65,12 +70,15 @@ function setupUploadWeightsButton(fileInput, model) {
         const file = fileInput.files[0];
         // Clear out the value of the file chooser. This ensures that if the user
         // selects the same file, we'll re-read it.
-        fileInput.value = '';
+        // fileInput.value = '';
         const fileReader = new FileReader();
         fileReader.onload = (evt) => {
+
+            console.log('loaded file:', file, fileInput);
+
             const weightsJson = fileReader.result;
 
-            model.loadWeightsFromJson(weightsJson);
+            loadWeightsFromJson(weightsJson, model);
             model.createModel()
 
         };
@@ -123,6 +131,9 @@ class EvalSampleModel {
 
         this.generatorNet = new Net('gen', 'Convolutional', modelConfigs);
         this.criticNet = new Net('crit', 'Convolutional', modelConfigs);
+    }
+
+    initialize() {
 
         loadNetFromPath(this.generatorNet.path, this.generatorNet);
         loadNetFromPath(this.criticNet.path, this.criticNet);
@@ -146,8 +157,6 @@ class EvalSampleModel {
         // examples per sec
         this.evalExamplesPerSec = 0;
         this.examplesPerSecElt = document.getElementById("evalExamplesPerSec");
-
-
     }
 
     displayCost(avgCost, batchesEvaluated) {
@@ -175,10 +184,6 @@ class EvalSampleModel {
             smoothExamplesPerSec(this.evalExamplesPerSec, _examplesPerSec);
 
         this.examplesPerSecElt.innerHTML = `Examples/sec: ${this.evalExamplesPerSec}`;
-    }
-
-    loadWeightsFromJson(weightsJson) {
-        this.genloadedWeights = JSON.parse(weightsJson);
     }
 
     displayInferenceExamplesOutput(
@@ -238,10 +243,11 @@ class EvalSampleModel {
         for (let i = 0; i < this.generatorNet.hiddenLayers.length; i++) {
             let weights = null;
             if (this.genLoadedWeights != null) {
+                console.log('loading weight', this.genLoadedWeights[i])
                 weights = this.genLoadedWeights[i];
             }
             [gen] = this.generatorNet.hiddenLayers[i].addLayerMultiple(g, [gen],
-                'generator', weights);
+                'generator', weights); // weights is a dictionary {w: NDArray, b: NDArray} w = Tensor.node.data (NDArray), b = Tensor.node.data (NDArray)
         }
         gen = g.tanh(gen);
 

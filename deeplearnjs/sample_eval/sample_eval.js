@@ -243,6 +243,8 @@ function buildModels(xhrDatasetConfigs, selectedDatasetName) {
 
     evalModel = new EvalSampleModel(modelConfigs);
 
+    evalModel.initialize();
+
 }
 
 // refactor those two load functions into generic utility functions by separating  
@@ -273,14 +275,11 @@ function loadNetFromPath(modelPath, which) {
     xhr.send();
 }
 
-
 function loadNetFromJson(modelJson, which) {
     var lastOutputShape;
     var hiddenLayers;
 
     lastOutputShape = which.inputShape;
-
-    console.log('in loadnetfromjson', which.name, which.inputShape);
 
     hiddenLayers = which.hiddenLayers;
 
