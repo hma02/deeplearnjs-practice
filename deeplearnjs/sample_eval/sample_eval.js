@@ -88,21 +88,13 @@ const TRAIN_TEST_RATIO = 5 / 6;
 const IMAGE_DATA_INDEX = 0;
 const LABEL_DATA_INDEX = 1;
 
-
 var isValid;
-
 var applicationState;
 var modelInitialized;
 
 var graphRunner;
 var graph;
 var session;
-var critOptimizer;
-
-var xTensor;
-
-var critLoss;
-var generatedImage;
 
 var datasetDownloaded;
 var datasetNames;
@@ -130,15 +122,6 @@ var critNeedGamma;
 var critNeedBeta;
 var batchSize;
 
-// var inputNDArrayVisualizers;
-var fakeInputNDArrayVisualizers;
-
-// var inputShape;
-// var labelShape;
-// var randVectorShape;
-var evalExamplesPerSec;
-var examplesEvaluated;
-
 var math;
 // Keep one instance of each NDArrayMath so we don't create a user-initiated
 // number of NDArrayMathGPU's.
@@ -152,15 +135,13 @@ function getImageDataOnly() {
 
 function createOptimizer(which) {
     if (which === 'gen') {
-        var selectedOptimizerName = genSelectedOptimizerName;
-        var learningRate = genLearningRate;
-        var momentum = genMomentum;
-        var gamma = genGamma;
-        var beta1 = genBeta1;
-        var beta2 = genBeta2;
-        var varName = 'generator';
-    } else if (which === 'disc') {
-
+        // var selectedOptimizerName = genSelectedOptimizerName;
+        // var learningRate = genLearningRate;
+        // var momentum = genMomentum;
+        // var gamma = genGamma;
+        // var beta1 = genBeta1;
+        // var beta2 = genBeta2;
+        // var varName = 'generator';
     } else { // critic
         var selectedOptimizerName = critSelectedOptimizerName;
         var learningRate = critLearningRate;
@@ -236,16 +217,10 @@ function fetchConfig_DownloadData(fetchConfigCallback) {
 
             // inputShape = dataSet.getDataShape(IMAGE_DATA_INDEX);
             //labelShape = dataSet.getDataShape(LABEL_DATA_INDEX);
-            // labelShape = [2]; // for gan there will be only two classes: real and fake
-            // randVectorShape = [100];
 
             fetchConfigCallback(_xhrDatasetConfigs, selectedDatasetName);
 
             datasetDownloaded = false;
-
-            // buildRealImageContainer();
-            fakeInputNDArrayVisualizers = [];
-            buildFakeImageContainer(document.querySelector('#generated-container'), fakeInputNDArrayVisualizers);
 
             dataSet.fetchData().then(() => {
                 dataSet.normalizeWithinBounds(IMAGE_DATA_INDEX, -1, 1);
@@ -258,120 +233,38 @@ function fetchConfig_DownloadData(fetchConfigCallback) {
         });
 }
 
-function populateModelDropdown(modelConfigs) {
+// -------- global function to build all needed models within the application
 
-    const _genModelNames = [];
-    const _critModelNames = [];
+var evalModel;
 
-    for (const modelName in modelConfigs) {
-        if (modelName.endsWith('(gen)')) {
-            _genModelNames.push(modelName);
-        } else {
-            _critModelNames.push(modelName);
-        }
-    }
+function buildModels(xhrDatasetConfigs, selectedDatasetName) {
 
-    genSelectedModelName = _genModelNames[_genModelNames.length - 1];
-    critSelectedModelName = _critModelNames[_critModelNames.length - 1];
+    const modelConfigs = xhrDatasetConfigs[selectedDatasetName].modelConfigs;
 
-    generatorNet = new Net('gen', 'Convolutional', modelConfigs);
-    criticNet = new Net('crit', 'Convolutional', modelConfigs);
-
-    function loadSuccessCallback(which) {
-
-        which.layerParamChanged();
-
-        which.validateNet();
-
-        isValid = criticNet.isValid && generatorNet.isValid
-
-        console.log(`${which.name}valid`, which.isValid, 'allvalid:', isValid)
-
-        if (isValid) {
-            createModel();
-        }
-    }
-
-    loadNetFromPath(generatorNet.path, generatorNet, loadSuccessCallback);
-    loadNetFromPath(criticNet.path, criticNet, loadSuccessCallback);
+    evalModel = new EvalSampleModel(modelConfigs);
 
 }
-
-// class Model {
-//     constructor(data) {
-
-//     }
-
-// }
-
-var generatorNet = null;
-var criticNet = null;
-class Net { // gen or disc or critic
-    constructor(name, archType, modelConfigs) {
-        this.name = name;
-        this.archType = archType;
-        this.path = modelConfigs[name].paths[this.archType];
-        this.inputShape = modelConfigs[name].inputShape;
-        this.outputShape = modelConfigs[name].outputShape;
-        this.isValid = false;
-        this.hiddenLayers = [];
-    }
-
-    addLayer() {
-
-        const modelLayer = new ModelLayer(); //document.createElement('model-layer');
-
-        const lastHiddenLayer = this.hiddenLayers[this.hiddenLayers.length - 1];
-
-        const lastOutputShape = lastHiddenLayer != null ? lastHiddenLayer.getOutputShape() : this.inputShape;
-        this.hiddenLayers.push(modelLayer);
-
-        modelLayer.initialize(window, lastOutputShape);
-        // layerParamChanged(which)
-
-        return modelLayer;
-    }
-
-    layerParamChanged() {
-        // Go through each of the model layers and propagate shapes.
-
-        let lastOutputShape = this.inputShape;
-
-        for (let i = 0; i < this.hiddenLayers.length; i++) {
-            lastOutputShape = this.hiddenLayers[i].setInputShape(lastOutputShape);
-        }
-    }
-
-    validateNet() {
-        let valid = true;
-
-        var HiddenLayers = this.hiddenLayers;
-        var lastLayerOutputShape = this.outputShape;
-
-        for (let i = 0; i < HiddenLayers.length; ++i) {
-            valid = valid && HiddenLayers[i].isValid();
-        }
-        if (HiddenLayers.length > 0) {
-            const lastLayer = HiddenLayers[HiddenLayers.length - 1];
-            valid = valid &&
-                util.arraysEqual(lastLayerOutputShape, lastLayer.getOutputShape()); // for gen ,  lastLayerOutputShape = inputShape, for critic, lastLayerOutputShape = labelShape
-        }
-
-        this.isValid = valid && (HiddenLayers.length > 0);
-    }
-}
-
 
 // refactor those two load functions into generic utility functions by separating  
 // global variables outside and using callback for async return
 
-function loadNetFromPath(modelPath, which, loadSuccessCallback) {
+function loadNetFromPath(modelPath, which) {
     const xhr = new XMLHttpRequest();
     xhr.open('GET', modelPath);
 
     xhr.onload = () => {
         loadNetFromJson(xhr.responseText, which);
-        loadSuccessCallback(which);
+        // which.layerParamChanged()
+        which.validateNet();
+
+        isValid = evalModel.criticNet.isValid && evalModel.generatorNet.isValid;
+
+        console.log(`${which.name}valid`, which.isValid, 'allvalid:', isValid);
+
+        if (isValid) {
+            evalModel.createModel();
+        }
+
     };
     xhr.onerror = (error) => {
         throw new Error(
@@ -398,221 +291,9 @@ function loadNetFromJson(modelJson, which) {
         lastOutputShape = hiddenLayers[i].setInputShape(lastOutputShape);
 
     }
-    // isValid = validateNet(criticNet.hiddenLayers, labelShape) && validateNet(generatorNet.hiddenLayers, inputShape);
 }
-
-function createModel() {
-    if (session != null) {
-        session.dispose();
-    }
-
-    modelInitialized = false;
-    if (isValid === false) {
-        return;
-    }
-
-    // Construct graph
-    graph = new Graph();
-    const g = graph;
-    randomTensor = g.placeholder('random', generatorNet.inputShape);
-    xTensor = g.placeholder('input', generatorNet.outputShape);
-    oneTensor = g.placeholder('one', [2]);
-    zeroTensor = g.placeholder('zero', [2]);
-
-    const varianceInitializer = new VarianceScalingInitializer()
-    const zerosInitializer = new ZerosInitializer()
-    const onesInitializer = new OnesInitializer();
-
-    // Construct generator
-    let gen = randomTensor;
-    for (let i = 0; i < generatorNet.hiddenLayers.length; i++) {
-        let weights = null;
-        if (genLoadedWeights != null) {
-            weights = genLoadedWeights[i];
-        }
-        [gen] = generatorNet.hiddenLayers[i].addLayerMultiple(g, [gen],
-            'generator', weights);
-    }
-    gen = g.tanh(gen);
-
-    // Construct critic
-    let crit1 = gen;
-    let crit2 = xTensor; // real image
-    for (let i = 0; i < criticNet.hiddenLayers.length; i++) {
-        let weights = null;
-        // if (loadedWeights != null) {
-        //     weights = loadedWeights[i];
-        // } // always need to retrain critic (which is the process of eval), never load weights for critic
-        [crit1, crit2] = criticNet.hiddenLayers[i].addLayerMultiple(g, [crit1, crit2],
-            'critic', weights);
-    }
-
-    generatedImage = gen;
-
-    critPredictionReal = crit2;
-    critPredictionFake = crit1;
-
-    const critLossReal = g.softmaxCrossEntropyCost(
-        critPredictionReal,
-        oneTensor
-    );
-    const critLossFake = g.softmaxCrossEntropyCost(
-        critPredictionFake,
-        zeroTensor
-    );
-    critLoss = g.add(critLossReal, critLossFake); // js loss
-
-    session = new Session(g, math);
-    graphRunner.setSession(session);
-
-    // startInference();
-
-    modelInitialized = true;
-
-    console.log('model initialized = true');
-}
-
-
 
 // --------------------  display and control  -------------------------------
-
-
-
-function uploadWeights() {
-    (document.querySelector('#weights-file')).click();
-}
-
-function setupUploadWeightsButton() {
-    // Show and setup the load view button.
-    const fileInput = document.querySelector('#weights-file');
-    fileInput.addEventListener('change', event => {
-        const file = fileInput.files[0];
-        // Clear out the value of the file chooser. This ensures that if the user
-        // selects the same file, we'll re-read it.
-        fileInput.value = '';
-        const fileReader = new FileReader();
-        fileReader.onload = (evt) => {
-            const weightsJson = fileReader.result;
-            loadWeightsFromJson(weightsJson, which);
-            createModel();
-        };
-        fileReader.readAsText(file);
-    });
-}
-
-function loadWeightsFromJson(weightsJson, which) {
-    genloadedWeights = JSON.parse(weightsJson);
-}
-
-function buildFakeImageContainer(inferenceContainer, fakeInputNDArrayVisualizers) {
-    // const inferenceContainer =
-    //     document.querySelector('#generated-container');
-    inferenceContainer.innerHTML = '';
-    // fakeInputNDArrayVisualizers = [];
-    // fakeOutputNDArrayVisualizers = [];
-    for (let i = 0; i < INFERENCE_EXAMPLE_COUNT; i++) {
-
-        if (i % INFERENCE_EXAMPLE_ROWS === 0 && i !== 0) {
-            linebreak = document.createElement("br");
-            inferenceContainer.appendChild(linebreak);
-        }
-
-        const inferenceExampleElement = document.createElement('div');
-        inferenceExampleElement.className = 'inference-example';
-        inferenceExampleElement.style.display = 'inline';
-
-        // Set up the input visualizer.
-        const ndarrayImageVisualizer = new NDArrayImageVisualizer(inferenceExampleElement)
-
-        ndarrayImageVisualizer.setShape(generatorNet.outputShape);
-        ndarrayImageVisualizer.setSize(
-            INFERENCE_IMAGE_SIZE_PX, INFERENCE_IMAGE_SIZE_PX);
-        fakeInputNDArrayVisualizers.push(ndarrayImageVisualizer);
-
-        inferenceContainer.appendChild(inferenceExampleElement);
-    }
-}
-
-function displayBatchesEvaluated(totalBatchesEvaluated) {
-    examplesEvaluated = batchSize * totalBatchesEvaluated;
-    document.getElementById("examplesEvaluated").innerHTML = `Examples evaluated: ${examplesEvaluated}`
-}
-
-function displayEvalExamplesPerSec(_examplesPerSec) {
-
-    evalExamplesPerSec =
-        smoothExamplesPerSec(evalExamplesPerSec, _examplesPerSec);
-
-    document.getElementById("evalExamplesPerSec").innerHTML = `Examples/sec: ${evalExamplesPerSec}`;
-}
-
-
-function smoothExamplesPerSec(
-    lastExamplesPerSec, nextExamplesPerSec) {
-    return Number((EXAMPLE_SEC_STAT_SMOOTHING_FACTOR * lastExamplesPerSec +
-            (1 - EXAMPLE_SEC_STAT_SMOOTHING_FACTOR) * nextExamplesPerSec)
-        .toPrecision(3));
-}
-
-function displayInferenceExamplesOutput(
-    inputFeeds, inferenceOutputs) {
-
-    // let realImages = [];
-    let fakeImages = [];
-
-    for (let i = 0; i < inferenceOutputs.length; i++) {
-        // realImages.push(inputFeeds[i][0].data);
-        fakeImages.push((inferenceOutputs[i]));
-
-    }
-
-    // realImages =
-    //     dataSet.unnormalizeExamples(realImages, IMAGE_DATA_INDEX);
-
-    fakeImages =
-        dataSet.unnormalizeExamples(fakeImages, IMAGE_DATA_INDEX);
-
-    // Draw the images.
-    for (let i = 0; i < inferenceOutputs.length; i++) {
-        // inputNDArrayVisualizers[i].saveImageDataFromNDArray(realImages[i]);
-        fakeInputNDArrayVisualizers[i].saveImageDataFromNDArray(fakeImages[i]);
-    }
-
-    // Draw the logits.
-    for (let i = 0; i < inferenceOutputs.length; i++) {
-
-        // inputNDArrayVisualizers[i].draw();
-        fakeInputNDArrayVisualizers[i].draw();
-
-    }
-}
-
-
-var critLossGraph = new cnnvis.Graph();
-var critLossWindow = new cnnutil.Window(200);
-
-function displayCost(avgCost, which) {
-
-    if (which === 'disc') {
-
-    } else if (which === 'crit') {
-        var cost = avgCost.get();
-        var batchesEvaluated = graphRunner.getTotalBatchesEvaluated();
-
-        critLossWindow.add(cost);
-
-        var xa = critLossWindow.get_average();
-
-        if (xa >= 0) { // if they are -1 it means not enough data was accumulated yet for estimates
-            critLossGraph.add(batchesEvaluated, xa);
-            critLossGraph.drawSelf(document.getElementById("critlossgraph"));
-        }
-    } else {
-
-        // displayAccuracy(avgCost)
-    }
-
-}
 
 function updateSelectedEnvironment(selectedEnvName, _graphRunner = null) {
     math = (selectedEnvName === 'GPU') ? mathGPU : mathCPU;
@@ -692,7 +373,33 @@ function run() {
     critBeta2 = 0.999;
     critNeedGamma = false;
     critNeedBeta = false;
-    batchSize = 15;
+    batchSize = 30;
+
+    // Default optimizer is momentum
+    critSelectedOptimizerName = "adam";
+
+    const eventObserver = {
+        batchesEvaluatedCallback: (batchesEvaluated) =>
+            evalModel.displayBatchesEvaluated(batchesEvaluated),
+
+        critCostCallback: (cost) => {
+            var batchesEvaluated = graphRunner.getTotalBatchesEvaluated();
+            evalModel.displayCost(cost, batchesEvaluated)
+        },
+
+        inferenceExamplesCallback:
+            (inputFeeds, inferenceOutputs) =>
+            evalModel.displayInferenceExamplesOutput(inputFeeds, inferenceOutputs),
+
+        evalExamplesPerSecCallback: (examplesPerSec) =>
+            evalModel.displayEvalExamplesPerSec(examplesPerSec),
+        // evalTotalTimeCallback: (totalTimeSec) => {
+        //     totalTimeSec = totalTimeSec.toFixed(1);
+        //     document.getElementById("evalTotalTimeSec").innerHTML = `Eval Total time: ${totalTimeSec} sec.`;
+        // },
+    };
+    graphRunner = new MyGraphRunner(math, session, eventObserver); // can do both inference and evaluate
+    // graphRunner = new ImageEvalGraphRunner(math, session, eventObserver); // can inference but can't do evaluate
 
     var envDropdown = document.getElementById("environment-dropdown");
     selectedEnvName = 'GPU';
@@ -700,53 +407,16 @@ function run() {
     envDropdown.options[ind].selected = 'selected';
     updateSelectedEnvironment(selectedEnvName, graphRunner);
 
-    // Default optimizer is momentum
-    critSelectedOptimizerName = "adam";
-
-    const eventObserver = {
-
-        batchesEvaluatedCallback: (batchesEvaluated) =>
-            displayBatchesEvaluated(batchesEvaluated),
-        critCostCallback: (cost) => displayCost(cost, 'crit'),
-        inferenceExamplesCallback:
-            (inputFeeds, inferenceOutputs) =>
-            displayInferenceExamplesOutput(inputFeeds, inferenceOutputs),
-        evalExamplesPerSecCallback: (examplesPerSec) =>
-            displayEvalExamplesPerSec(examplesPerSec),
-        evalTotalTimeCallback: (totalTimeSec) => {
-            totalTimeSec = totalTimeSec.toFixed(1);
-            document.getElementById("evalTotalTimeSec").innerHTML = `Eval Total time: ${totalTimeSec} sec.`;
-        },
-    };
-    graphRunner = new MyGraphRunner(math, session, eventObserver); // can do both inference and evaluate
-    // graphRunner = new ImageEvalGraphRunner(math, session, eventObserver); // can inference but can't do evaluate
 
     genLoadedWeights = null;
     modelInitialized = false;
-
-    /*
-
-        const uploadModelButton = document.querySelector('#upload-model');
-        uploadModelButton.addEventListener('click', () => uploadModel());
-        setupUploadModelButton();
-    
-        const uploadWeightsButton = document.querySelector('#upload-weights');
-        uploadWeightsButton.addEventListener('click', () => uploadWeights());
-        setupUploadWeightsButton();
-        */
 
     document.querySelector('#environment-dropdown').addEventListener('change', (event) => {
         selectedEnvName = event.target.value;
         updateSelectedEnvironment(selectedEnvName, graphRunner)
     });
-    // critHiddenLayers = [];
-    // genHiddenLayers = [];
-    evalExamplesPerSec = 0;
 
-    function buildModels(xhrDatasetConfigs, selectedDatasetName) {
-        const modelConfigs = xhrDatasetConfigs[selectedDatasetName].modelConfigs;
-        populateModelDropdown(modelConfigs);
-    }
+
     // Set up datasets.
     fetchConfig_DownloadData(buildModels);
 
@@ -782,13 +452,13 @@ function monitor() {
                 if (infer_request) {
                     infer_request = false;
                     // createModel();
-                    startInference();
+                    evalModel.startInference();
                 }
 
                 if (eval_request) {
                     eval_request = false;
                     // createModel();
-                    startEvalulating();
+                    evalModel.startEvalulating();
                 }
 
             } else {
