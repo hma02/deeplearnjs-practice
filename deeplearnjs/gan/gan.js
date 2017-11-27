@@ -653,15 +653,32 @@ function createModel() {
     const zerosInitializer = new ZerosInitializer()
     const onesInitializer = new OnesInitializer();
 
+
+    let weights = null;
+    if (loadedWeights != null) {
+
+        function toArray(dicValues, dicSize) {
+            var array = dicValues;
+            array.length = dicSize;
+            return Array.prototype.slice.call(array);
+        }
+
+        console.log('loading weights', loadedWeights);
+        weights = {};
+        for (var key in loadedWeights) {
+            weights[key] = toArray(loadedWeights[key].ndarrayData.values, loadedWeights[key].size);
+        }
+
+    } else {
+        console.log('no weights loaded, random initialize weights');
+    }
+
     // Construct generator
     let gen = randomTensor;
     for (let i = 0; i < genHiddenLayers.length; i++) {
-        let weights = null;
-        if (loadedWeights != null) {
-            weights = loadedWeights[i];
-        }
+
         [gen] = genHiddenLayers[i].addLayerMultiple(g, [gen],
-            'generator', weights);
+            'generator-' + i.toString(), weights);
     }
     gen = g.tanh(gen);
 
@@ -670,11 +687,11 @@ function createModel() {
     let disc2 = xTensor;
     for (let i = 0; i < discHiddenLayers.length; i++) {
         let weights = null;
-        if (loadedWeights != null) {
-            weights = loadedWeights[i];
-        }
+        // if (loadedWeights != null) {
+        //     weights = loadedWeights;
+        // }
         [disc1, disc2] = discHiddenLayers[i].addLayerMultiple(g, [disc1, disc2],
-            'discriminator', weights);
+            'discriminator' + i.toString(), weights);
     }
 
     discPredictionReal = disc2;
@@ -1367,9 +1384,9 @@ function uploadWeights() {
     (document.querySelector('#weights-file')).click();
 }
 
-function setupUploadWeightsButton() {
+function setupUploadWeightsButton(fileInput) {
     // Show and setup the load view button.
-    const fileInput = document.querySelector('#weights-file');
+    // const fileInput = document.querySelector('#weights-file');
     fileInput.addEventListener('change', event => {
         const file = fileInput.files[0];
         // Clear out the value of the file chooser. This ensures that if the user
@@ -1378,17 +1395,57 @@ function setupUploadWeightsButton() {
         const fileReader = new FileReader();
         fileReader.onload = (evt) => {
             const weightsJson = fileReader.result;
-            loadWeightsFromJson(weightsJson);
+            loadedWeights = JSON.parse(weightsJson);
             createModel();
         };
         fileReader.readAsText(file);
     });
 }
 
-function loadWeightsFromJson(weightsJson) {
-    loadedWeights = JSON.parse(weightsJson);
+// method 2
+function getWeightsFromGraph(graph, name = 'generator') {
+
+    let weights = {};
+
+    genNodes = graph.getNodes().filter((x) =>
+        x.name.startsWith(name));
+
+    for (let j = 0; j < genNodes.length; j++) {
+
+        genNodes[j].data.dataSync();
+
+        values = genNodes[j].data;
+
+        console.log('genNodes', j, genNodes[j].name, values)
+
+        weights[genNodes[j].name] = values;
+
+    }
+
+    return weights // only those layerweights with non-null data, w,b unpacked [w,b,w,b,...]
 }
 
+function downloadWeightsAsJson(weights) {
+
+    var json_text = JSON.stringify(weights);
+
+    const blob = new Blob([json_text], {
+        type: 'text/json'
+    });
+    const textFile = window.URL.createObjectURL(blob);
+
+    // Force a download.
+    const a = document.createElement('a');
+    document.body.appendChild(a);
+    a.style.display = 'none';
+    a.href = textFile;
+    // tslint:disable-next-line:no-any
+    (a).download = './generatorWeights.json';
+    a.click();
+
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(textFile);
+}
 
 
 function run() {
@@ -1542,12 +1599,16 @@ function run() {
         const uploadModelButton = document.querySelector('#upload-model');
         uploadModelButton.addEventListener('click', () => uploadModel());
         setupUploadModelButton();
-    
-        const uploadWeightsButton = document.querySelector('#upload-weights');
-        uploadWeightsButton.addEventListener('click', () => uploadWeights());
-        setupUploadWeightsButton();
-        */
+    */
 
+    const downloadWeightsButton = document.querySelector('#btnweights');
+    downloadWeightsButton.addEventListener('click', () => {
+        let weights = getWeightsFromGraph(graph)
+        // let weights = getWeightsFromHiddenLayers(genHiddenLayers);
+        downloadWeightsAsJson(weights);
+    });
+    const fileInput = document.querySelector('#weights-file');
+    setupUploadWeightsButton(fileInput);
 
     document.querySelector('#environment-dropdown').addEventListener('change', (event) => {
         selectedEnvName = event.target.value;
