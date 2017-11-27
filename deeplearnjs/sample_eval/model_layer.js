@@ -99,12 +99,12 @@ class ModelLayer {
         return this.outputShape;
     }
 
-    addLayer(
-        g, network, index,
-        weights) {
-        return this.layerBuilder.addLayer(
-            g, network, this.inputShape, index, weights);
-    }
+    // addLayer(
+    //     g, network, index,
+    //     weights) {
+    //     return this.layerBuilder.addLayer(
+    //         g, network, this.inputShape, index, weights);
+    // }
 
     addLayerMultiple(
         g, networks, name,
@@ -267,28 +267,28 @@ class FullyConnectedLayerBuilder {
         return [this.hiddenUnits];
     }
 
-    addLayer(
-        g, network, inputShape, index,
-        weights) {
-        const inputSize = util.sizeFromShape(inputShape);
-        const wShape = [this.hiddenUnits, inputSize];
+    // addLayer(
+    //     g, network, inputShape, index,
+    //     weights) {
+    //     const inputSize = util.sizeFromShape(inputShape);
+    //     const wShape = [this.hiddenUnits, inputSize];
 
-        let weightsInitializer;
-        let biasInitializer;
-        if (weights != null) {
-            weightsInitializer =
-                new NDArrayInitializer(Array2D.new(wShape, weights['W']));
-            biasInitializer = new NDArrayInitializer(Array1D.new(weights['b']));
-        } else {
-            weightsInitializer = new VarianceScalingInitializer();
-            biasInitializer = new ZerosInitializer();
-        }
+    //     let weightsInitializer;
+    //     let biasInitializer;
+    //     if (weights != null) {
+    //         weightsInitializer =
+    //             new NDArrayInitializer(Array2D.new(wShape, weights['W']));
+    //         biasInitializer = new NDArrayInitializer(Array1D.new(weights['b']));
+    //     } else {
+    //         weightsInitializer = new VarianceScalingInitializer();
+    //         biasInitializer = new ZerosInitializer();
+    //     }
 
-        const useBias = true;
-        return g.layers.dense(
-            'fc1', network, this.hiddenUnits, null, useBias, weightsInitializer,
-            biasInitializer);
-    }
+    //     const useBias = true;
+    //     return g.layers.dense(
+    //         'fc1', network, this.hiddenUnits, null, useBias, weightsInitializer,
+    //         biasInitializer);
+    // }
 
     addLayerMultiple(
         g, networks, inputShape, name,
@@ -300,14 +300,14 @@ class FullyConnectedLayerBuilder {
         let b;
 
         if (weights != null) {
-            w = Array2D.new(wShape, weights['W']);
-            b = Array1D.new(weights['b']);
+            w = Array2D.new(wShape, weights[name + '-fc-w']);
+            b = Array1D.new(weights[name + '-fc-b']);
         } else {
             w = Array2D.randTruncatedNormal(wShape, 0, 0.1);
             b = Array1D.zeros([this.hiddenUnits]);
         }
-        const wTensor = g.variable(name + '-weights', w);
-        const bTensor = g.variable(name + '-bias', b);
+        const wTensor = g.variable(name + '-fc-w', w);
+        const bTensor = g.variable(name + '-fc-b', b);
 
         const returnedTensors = []
         for (let i = 0; i < networks.length; i++) {
@@ -340,11 +340,11 @@ class ReLULayerBuilder {
         return inputShape;
     }
 
-    addLayer(
-        g, network, inputShape, index,
-        weights) {
-        return g.relu(network);
-    }
+    // addLayer(
+    //     g, network, inputShape, index,
+    //     weights) {
+    //     return g.relu(network);
+    // }
 
     addLayerMultiple(
         g, networks, inputShape, name,
@@ -418,25 +418,25 @@ class Convolution2DLayerBuilder {
             this.outputDepth, this.stride, this.zeroPad);
     }
 
-    addLayer(
-        g, network, inputShape, index,
-        weights) {
-        const wShape = [this.fieldSize, this.fieldSize, inputShape[2], this.outputDepth];
-        let w;
-        let b;
-        if (weights != null) {
-            w = Array4D.new(wShape, weights['W']);
-            b = Array1D.new(weights['b']);
-        } else {
-            w = Array4D.randTruncatedNormal(wShape, 0, 0.1);
-            b = Array1D.zeros([this.outputDepth]);
-        }
-        const wTensor = g.variable(`conv2d-${index}-w`, w);
-        const bTensor = g.variable(`conv2d-${index}-b`, b);
-        return g.conv2d(
-            network, wTensor, bTensor, this.fieldSize, this.outputDepth,
-            this.stride, this.zeroPad);
-    }
+    // addLayer(
+    //     g, network, inputShape, index,
+    //     weights) {
+    //     const wShape = [this.fieldSize, this.fieldSize, inputShape[2], this.outputDepth];
+    //     let w;
+    //     let b;
+    //     if (weights != null) {
+    //         w = Array4D.new(wShape, weights['W']);
+    //         b = Array1D.new(weights['b']);
+    //     } else {
+    //         w = Array4D.randTruncatedNormal(wShape, 0, 0.1);
+    //         b = Array1D.zeros([this.outputDepth]);
+    //     }
+    //     const wTensor = g.variable(`conv2d-${index}-w`, w);
+    //     const bTensor = g.variable(`conv2d-${index}-b`, b);
+    //     return g.conv2d(
+    //         network, wTensor, bTensor, this.fieldSize, this.outputDepth,
+    //         this.stride, this.zeroPad);
+    // }
 
     addLayerMultiple(
         g, networks, inputShape, name,
@@ -445,14 +445,14 @@ class Convolution2DLayerBuilder {
         let w;
         let b;
         if (weights != null) {
-            w = Array4D.new(wShape, weights['W']);
-            b = Array1D.new(weights['b']);
+            w = Array4D.new(wShape, weights[name + '-conv2d-w']);
+            b = Array1D.new(weights[name + '-conv2d-b']);
         } else {
             w = Array4D.randTruncatedNormal(wShape, 0, 0.1);
             b = Array1D.zeros([this.outputDepth]);
         }
-        const wTensor = g.variable(name + 'conv2d-w', w);
-        const bTensor = g.variable(name + 'conv2d-b', b);
+        const wTensor = g.variable(name + '-conv2d-w', w);
+        const bTensor = g.variable(name + '-conv2d-b', b);
 
         const returnedTensors = []
         for (let i = 0; i < networks.length; i++) {
@@ -520,11 +520,11 @@ class MaxPoolLayerBuilder {
             this.stride, this.zeroPad);
     }
 
-    addLayer(
-        g, network, inputShape, index,
-        weights) {
-        return g.maxPool(network, this.fieldSize, this.stride, this.zeroPad);
-    }
+    // addLayer(
+    //     g, network, inputShape, index,
+    //     weights) {
+    //     return g.maxPool(network, this.fieldSize, this.stride, this.zeroPad);
+    // }
 
     addLayerMultiple(
         g, networks, inputShape, name,
@@ -568,11 +568,11 @@ class ReshapeLayerBuilder {
         return this.outputShape;
     }
 
-    addLayer(
-        g, network, inputShape, index,
-        weights) {
-        return g.reshape(network, this.outputShape);
-    }
+    // addLayer(
+    //     g, network, inputShape, index,
+    //     weights) {
+    //     return g.reshape(network, this.outputShape);
+    // }
 
     addLayerMultiple(
         g, networks, inputShape, name,
@@ -610,11 +610,11 @@ class FlattenLayerBuilder {
         return [util.sizeFromShape(inputShape)];
     }
 
-    addLayer(
-        g, network, inputShape, index,
-        weights) {
-        return g.reshape(network, this.getOutputShape(inputShape));
-    }
+    // addLayer(
+    //     g, network, inputShape, index,
+    //     weights) {
+    //     return g.reshape(network, this.getOutputShape(inputShape));
+    // }
 
     addLayerMultiple(
         g, networks, inputShape, name,

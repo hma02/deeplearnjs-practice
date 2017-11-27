@@ -93,7 +93,6 @@ var applicationState;
 var modelInitialized;
 
 var graphRunner;
-var graph;
 var session;
 
 var datasetDownloaded;
@@ -106,7 +105,6 @@ var genSelectedModelName;
 
 var critSelectedOptimizerName;
 
-var genLoadedWeights;
 var dataSets;
 var dataSet;
 // var xhrDatasetConfigs;
@@ -133,7 +131,7 @@ function getImageDataOnly() {
     return images
 }
 
-function createOptimizer(which) {
+function createOptimizer(which, graph) {
     if (which === 'gen') {
         // var selectedOptimizerName = genSelectedOptimizerName;
         // var learningRate = genLearningRate;
@@ -406,8 +404,6 @@ function run() {
     envDropdown.options[ind].selected = 'selected';
     updateSelectedEnvironment(selectedEnvName, graphRunner);
 
-
-    genLoadedWeights = null;
     modelInitialized = false;
 
     document.querySelector('#environment-dropdown').addEventListener('change', (event) => {

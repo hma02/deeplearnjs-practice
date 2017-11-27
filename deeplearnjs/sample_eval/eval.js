@@ -54,15 +54,6 @@ class Net { // gen or disc or critic
 }
 
 
-function uploadWeights() {
-    (document.querySelector('#weights-file')).click();
-}
-
-
-function loadWeightsFromJson(weightsJson, model) {
-    model.genloadedWeights = JSON.parse(weightsJson);
-}
-
 function setupUploadWeightsButton(fileInput, model) {
     // Show and setup the load view button.
     // const fileInput = document.querySelector('#weights-file');
@@ -70,16 +61,21 @@ function setupUploadWeightsButton(fileInput, model) {
         const file = fileInput.files[0];
         // Clear out the value of the file chooser. This ensures that if the user
         // selects the same file, we'll re-read it.
-        // fileInput.value = '';
+        fileInput.value = '';
         const fileReader = new FileReader();
         fileReader.onload = (evt) => {
 
-            console.log('loaded file:', file, fileInput);
+            // console.log('loaded file:', file, fileInput);
 
             const weightsJson = fileReader.result;
 
-            loadWeightsFromJson(weightsJson, model);
-            model.createModel()
+            weights = JSON.parse(weightsJson);
+
+            if (isValid) {
+                model.createModel(weights);
+            } else {
+                console.log('model not valid');
+            }
 
         };
         fileReader.readAsText(file);
@@ -138,7 +134,7 @@ class EvalSampleModel {
         loadNetFromPath(this.generatorNet.path, this.generatorNet);
         loadNetFromPath(this.criticNet.path, this.criticNet);
 
-        var fileInput = document.querySelector('#weights-file');
+        const fileInput = document.querySelector('#weights-file');
         setupUploadWeightsButton(fileInput, this);
 
         // image visualizers
@@ -216,10 +212,7 @@ class EvalSampleModel {
         }
     }
 
-    createModel() {
-        if (session != null) {
-            session.dispose();
-        }
+    createModel(loadedWeights = null) {
 
         modelInitialized = false;
         if (isValid === false) {
@@ -227,8 +220,8 @@ class EvalSampleModel {
         }
 
         // Construct graph
-        graph = new Graph();
-        const g = graph;
+        this.graph = new Graph();
+        const g = this.graph;
         this.randomTensor = g.placeholder('random', this.generatorNet.inputShape);
         this.xTensor = g.placeholder('input', this.generatorNet.outputShape);
         this.oneTensor = g.placeholder('one', [2]);
@@ -238,16 +231,30 @@ class EvalSampleModel {
         const zerosInitializer = new ZerosInitializer()
         const onesInitializer = new OnesInitializer();
 
+        let weights = null;
+        if (loadedWeights != null) {
+
+            function toArray(dicValues, dicSize) {
+                var array = dicValues;
+                array.length = dicSize;
+                return Array.prototype.slice.call(array);
+            }
+
+            console.log('loading weights', loadedWeights);
+            weights = {};
+            for (var key in loadedWeights) {
+                weights[key] = toArray(loadedWeights[key].ndarrayData.values, loadedWeights[key].size);
+            }
+
+        } else {
+            console.log('no weights loaded, random initialize weights');
+        }
+
         // Construct generator
         let gen = this.randomTensor;
         for (let i = 0; i < this.generatorNet.hiddenLayers.length; i++) {
-            let weights = null;
-            if (this.genLoadedWeights != null) {
-                console.log('loading weight', this.genLoadedWeights[i])
-                weights = this.genLoadedWeights[i];
-            }
             [gen] = this.generatorNet.hiddenLayers[i].addLayerMultiple(g, [gen],
-                'generator', weights); // weights is a dictionary {w: NDArray, b: NDArray} w = Tensor.node.data (NDArray), b = Tensor.node.data (NDArray)
+                'generator-' + i.toString(), weights); // weights is a dictionary {w: NDArray, b: NDArray}
         }
         gen = g.tanh(gen);
 
@@ -255,12 +262,12 @@ class EvalSampleModel {
         let crit1 = gen;
         let crit2 = this.xTensor; // real image
         for (let i = 0; i < this.criticNet.hiddenLayers.length; i++) {
-            let weights = null;
+            let _weights = null;
             // if (loadedWeights != null) {
             //     weights = loadedWeights[i];
             // } // always need to retrain critic (which is the process of eval), never load weights for critic
             [crit1, crit2] = this.criticNet.hiddenLayers[i].addLayerMultiple(g, [crit1, crit2],
-                'critic', weights);
+                'critic-' + i.toString(), _weights);
         }
 
         this.generatedImage = gen;
@@ -278,8 +285,11 @@ class EvalSampleModel {
         );
         this.critLoss = g.add(critLossReal, critLossFake); // js loss
 
-        session = new Session(g, math);
-        graphRunner.setSession(session);
+        if (this.session != null) {
+            this.session.dispose()
+        }
+        this.session = new Session(g, math);
+        graphRunner.setSession(this.session);
 
         // startInference();
 
@@ -346,7 +356,7 @@ class EvalSampleModel {
         const data = getImageDataOnly();
 
         // Recreate optimizer with the selected optimizer and hyperparameters.
-        let critOptimizer = createOptimizer('crit'); // for js, exact same optimizer
+        let critOptimizer = createOptimizer('crit', this.graph); // for js, exact same optimizer
         // genOptimizer = createOptimizer('gen');
 
         if (isValid && data != null) {
