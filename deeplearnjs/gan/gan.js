@@ -153,63 +153,6 @@ const TRAIN_TEST_RATIO = 5 / 6;
 const IMAGE_DATA_INDEX = 0;
 const LABEL_DATA_INDEX = 1;
 
-// tslint:disable-next-line:variable-name
-// export let GANPlaygroundPolymer: new() => PolymerHTMLElement = PolymerElement({
-//     is: 'gan-playground',
-//     properties: {
-//         inputShapeDisplay: String,
-//         isValid: Boolean,
-//         inferencesPerSec: Number,
-//         inferenceDuration: Number,
-//         generationsPerSec: Number,
-//         generationDuration: Number,
-//         examplesTrained: Number,
-//         examplesPerSec: Number,
-//         totalTimeSec: String,
-//         applicationState: Number,
-//         modelInitialized: Boolean,
-//         showTrainStats: Boolean,
-//         datasetDownloaded: Boolean,
-//         datasetNames: Array,
-//         selectedDatasetName: String,
-//         modelNames: Array,
-//         genModelNames: Array,
-//         discSelectedOptimizerName: String,
-//         genSelectedOptimizerName: String,
-//         optimizerNames: Array,
-//         discLearningRate: Number,
-//         genLearningRate: Number,
-//         discMomentum: Number,
-//         genMomentum: Number,
-//         discNeedMomentum: Boolean,
-//         genNeedMomentum: Boolean,
-//         discGamma: Number,
-//         genGamma: Number,
-//         discBeta1: Number,
-//         genBeta1: Number,
-//         discBeta2: Number,
-//         genBeta2: Number,
-//         discNeedGamma: Boolean,
-//         genNeedGamma: Boolean,
-//         discNeedBeta: Boolean,
-//         genNeedBeta: Boolean,
-//         batchSize: Number,
-//         selectedModelName: String,
-//         genSelectedModelName: String,
-//         selectedNormalizationOption: {
-//             type: Number,
-//             value: Normalization.NORMALIZATION_NEGATIVE_ONE_TO_ONE
-//         },
-//         // Stats
-//         showDatasetStats: Boolean,
-//         statsInputMin: Number,
-//         statsInputMax: Number,
-//         statsInputShapeDisplay: String,
-//         statsLabelShapeDisplay: String,
-//         statsExampleCount: Number,
-//     }
-// });
-
 var ApplicationState = {
     IDLE: 1,
     TRAINING: 2
@@ -732,9 +675,9 @@ function populateDatasets() {
                     }
                 }
                 datasetNames = Object.keys(dataSets);
-                selectedDatasetName = datasetNames[0];
+                selectedDatasetName = datasetNames[0]; // initialize on MNIST
                 xhrDatasetConfigs = _xhrDatasetConfigs;
-                updateSelectedDataset(datasetNames[0]);
+                updateSelectedDataset(selectedDatasetName);
             },
             error => {
                 throw new Error('Dataset config could not be loaded: ' + error);
@@ -1513,22 +1456,37 @@ function run() {
     };
     graphRunner = new MyGraphRunner(math, session, eventObserver);
 
+
+    applicationState = ApplicationState.IDLE;
+    loadedWeights = null;
+    modelInitialized = false;
+    showTrainStats = false;
+    showDatasetStats = false;
+
+    discHiddenLayers = [];
+    genHiddenLayers = [];
+    examplesPerSec = 0;
+    inferencesPerSec = 0;
+    generationsPerSec = 0;
+    randVectorShape = [100];
+
     // Set up datasets.
     populateDatasets();
     // createModel();
 
-    // document.querySelector('#dataset-dropdown .dropdown-content')
-    //     .addEventListener(
-    //         // tslint:disable-next-line:no-any
-    //         'iron-activate', (event) => {
-    //             // Update the dataset.
-    //             const datasetName = event.detail.selected;
-    //             updateSelectedDataset(datasetName);
 
-    //             // TODO(nsthorat): Remember the last model used for each dataset.
-    //             removeAllLayers('gen');
-    //             removeAllLayers('disc');
-    //         });
+
+    document.querySelector('#dataset-dropdown')
+        .addEventListener(
+            'change', (event) => {
+                // Update the dataset.
+                const datasetName = event.target.value;
+                updateSelectedDataset(datasetName);
+
+                // TODO(nsthorat): Remember the last model used for each dataset.
+                removeAllLayers('gen');
+                removeAllLayers('disc');
+            });
 
 
     document.querySelector('#model-dropdown').addEventListener(
@@ -1581,11 +1539,7 @@ function run() {
 
 
 
-    applicationState = ApplicationState.IDLE;
-    loadedWeights = null;
-    modelInitialized = false;
-    showTrainStats = false;
-    showDatasetStats = false;
+
 
     // const addButton = document.querySelector('#add-layer');
     // addButton.addEventListener('click', () => addLayer('disc'));
@@ -1615,12 +1569,6 @@ function run() {
         updateSelectedEnvironment(selectedEnvName, graphRunner)
     });
 
-    discHiddenLayers = [];
-    genHiddenLayers = [];
-    examplesPerSec = 0;
-    inferencesPerSec = 0;
-    generationsPerSec = 0;
-    randVectorShape = [100];
 }
 
 
@@ -1742,6 +1690,7 @@ function monitor() {
     } else {
         if (isValid) {
 
+            btn_infer.className = 'btn btn-primary btn-md';
             btn_infer.disabled = false;
             btn_train.style.visibility = 'visible';
 
