@@ -1722,7 +1722,7 @@ function monitor() {
         } else {
             btn_infer.className = 'btn btn-danger btn-md';
             btn_infer.disabled = true;
-            btn_infer.value = 'Model not valid'
+            btn_infer.value = 'Model not valid or being reinitialized'
             // btn_train.disabled = true;
             btn_train.style.visibility = 'hidden';
         }
