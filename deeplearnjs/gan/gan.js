@@ -1479,6 +1479,12 @@ function run() {
     document.querySelector('#dataset-dropdown')
         .addEventListener(
             'change', (event) => {
+
+                if (graphRunner != null) {
+                    graphRunner = null;
+                }
+                graphRunner = new MyGraphRunner(math, session, eventObserver);
+
                 // Update the dataset.
                 const datasetName = event.target.value;
                 updateSelectedDataset(datasetName);
@@ -1717,7 +1723,10 @@ function monitor() {
                 if (graphRunner.getTotalBatchesTrained() > 0) {
                     graphRunner.resumeTraining()
                 } else {
-                    console.assert(examplesPerSecGraph.pts.length == 0 && accuracyGraph.pts.length == 0 && lossGraph.pts.length == 0, 'need refreshing page');
+                    examplesPerSecGraph.pts = [];
+                    accuracyGraph.pts = [];
+                    lossGraph.pts = [];
+
                     startTraining();
                 }
 
