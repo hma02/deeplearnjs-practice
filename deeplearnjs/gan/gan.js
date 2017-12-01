@@ -1666,13 +1666,13 @@ btn_train.addEventListener('click', () => {
         if (graphRunner != null) {
             graphRunner.stopTraining();
         }
-        btn_train.value = 'Start Training';
+        // btn_train.value = 'Start Training';
 
     } else {
 
         train_request = true;
 
-        btn_train.value = 'Pause Training';
+        // btn_train.value = 'Pause Training';
 
     }
 });
@@ -1701,7 +1701,11 @@ function monitor() {
             }
 
             if (train_paused) {
-                btn_train.value = 'Start Training'
+                if (graphRunner.getTotalBatchesTrained() > 0) {
+                    btn_train.value = 'Resume Training'
+                } else {
+                    btn_train.value = 'Start Training'
+                }
             } else {
                 btn_train.value = 'Stop Training'
             }
@@ -1710,7 +1714,13 @@ function monitor() {
             if (train_request) {
                 train_request = false;
                 // createModel();
-                startTraining();
+                if (graphRunner.getTotalBatchesTrained() > 0) {
+                    graphRunner.resumeTraining()
+                } else {
+                    console.assert(examplesPerSecGraph.pts.length == 0 && accuracyGraph.pts.length == 0 && lossGraph.pts.length == 0, 'need refreshing page');
+                    startTraining();
+                }
+
             }
 
             if (infer_request) {
