@@ -13,7 +13,6 @@ var optimizer;
 var learningRate;
 var initialLearningRate;
 
-
 var CostReduction = dl.CostReduction;
 var Array1D = dl.Array1D;
 var Array4D = dl.Array4D;
@@ -28,7 +27,6 @@ var selectedDatasetName;
 var VarianceScalingInitializer = dl.VarianceScalingInitializer;
 var ZerosInitializer = dl.ZerosInitializer;
 
-var datasetDownloaded = false;
 var inputShape;
 var labelShape;
 var chart;
@@ -49,6 +47,16 @@ var LABEL_DATA_INDEX = 1;
 
 const INFERENCE_EXAMPLE_COUNT = 1;
 const INFERENCE_IMAGE_SIZE_PX = 100;
+
+var btn;
+var accuracyElt;
+var mathCPU;
+var mathGPU;
+var request = false;
+var paused = true;
+var step = 0;
+var datasetDownloaded = false;
+
 
 function createFullyConnectedLayer(
     graph, inputLayer, layerIndex,
@@ -109,39 +117,6 @@ function createFlattenLayer(graph, inputLayer, layerIndex, inputShape) {
 
     out.outputShape = [size];
     return out;
-}
-
-function populateDatasets(callback) {
-    dataSets = {};
-    xhr_dataset.getXhrDatasetConfig(DATASETS_CONFIG_JSON)
-        .then(_xhrDatasetConfigs => {
-                for (const datasetName in _xhrDatasetConfigs) {
-                    if (_xhrDatasetConfigs.hasOwnProperty(datasetName)) {
-                        dataSets[datasetName] =
-                            new XhrDataset(_xhrDatasetConfigs[datasetName]);
-                    }
-                }
-                var datasetNames = Object.keys(dataSets);
-                xhrDatasetConfigs = _xhrDatasetConfigs;
-                selectedDatasetName = datasetNames[0]
-                dataSet = dataSets[selectedDatasetName]; //MNIST
-                updateSelectedDataset(callback);
-            },
-            error => {
-                throw new Error(`Dataset config could not be loaded: ${error}`);
-            });
-}
-
-function updateSelectedDataset(callback) {
-
-    dataSet.fetchData().then(() => {
-        datasetDownloaded = true;
-        dataSet.normalizeWithinBounds(IMAGE_DATA_INDEX, -1, 1)
-        callback();
-    });
-
-    inputShape = dataSet.getDataShape(IMAGE_DATA_INDEX);
-    labelShape = dataSet.getDataShape(LABEL_DATA_INDEX);
 }
 
 
@@ -222,8 +197,6 @@ function displayInferenceExamplesOutput(inputFeeds, inferenceOutputs) {
     const logits = [];
     const labels = [];
 
-    console.log('inputFeeds', inputFeeds, inferenceOutputs);
-
     for (let i = 0; i < inputFeeds.length; i++) {
         images.push(inputFeeds[i][IMAGE_DATA_INDEX].data);
         labels.push(inputFeeds[i][LABEL_DATA_INDEX].data);
@@ -249,13 +222,6 @@ function displayInferenceExamplesOutput(inputFeeds, inferenceOutputs) {
         softmaxLogits.dispose();
     }
 
-}
-
-var updateNetParamDisplay = function () {
-    document.getElementById('learning-rate-input').value = learningRate;
-    document.getElementById('egdiv').innerHTML = 'step = ' + step;
-    // document.getElementById('batch_size_input').value = batchSize;
-    // // document.getElementById('decay_input').value = trainer.l2_decay;
 }
 
 function createChart(canvasElt, label, data, min = 0, max = null) {
@@ -306,76 +272,38 @@ function createChart(canvasElt, label, data, min = 0, max = null) {
     return new Chart(context, config);
 }
 
-function train_per() {
-    if (step > 4242) {
-        // Stop training.
-        return;
-    }
-
-    if (paused) return;
-
-    // We only fetch the cost every 10 steps because doing so requires a transfer
-    // of data from the GPU.
-
-    const [cost, accuracy] = train1Batch(step % 10 === 0);
-
-    var d = document.getElementById('egdiv');
-    d.innerHTML = 'step = ' + step;
-
-    if (step % 10 === 0) {
-
-        chartData.push({
-            x: step,
-            y: cost
-        });
-
-        config.data.datasets[0].data = chartData;
-        chart.update();
-
-        // Print data to console so the user can inspect.
-        console.log('step', step, 'cost', cost, 'accuracy', accuracy);
-
-        // display accuracy
-        accuracyElt.innerHTML = `accuracy: ${accuracy[0].toFixed(4)*100}%`;
-
-        predict(predictionTensor, inferenceFeedEntries, displayInferenceExamplesOutput);
-
-    }
-
-    step++;
-}
-
-
-
-function toggle_pause() {
-    paused = !paused;
-
-    if (paused) {
-        btn.value = 'Resume'
-    } else {
-        btn.value = 'Pause';
-    }
-}
-
-
-function run() {
-
-    updateNetParamDisplay();
-
-    if (UI_initialized) {
-        console.log('starting!');
-        setInterval(train_per, 5); // lets go!
-    } else {
-        console.log('waiting!');
-        setTimeout(run, 1000); // run again after 1second
-    } // keep checking
-}
-
-
-var mathGPU = new NDArrayMathGPU();;
-var mathCPU = new NDArrayMathCPU();;
-
 function buildModel() {
+
+    const inferenceContainer =
+        document.querySelector('#inference-container');
+    inferenceContainer.innerHTML = '';
+    inputNDArrayVisualizers = [];
+    outputNDArrayVisualizers = [];
+    for (let i = 0; i < INFERENCE_EXAMPLE_COUNT; i++) {
+        const inferenceExampleElement = document.createElement('div');
+        inferenceExampleElement.className = 'inference-example';
+
+        // Set up the input visualizer.
+
+        const ndarrayImageVisualizer = new NDArrayImageVisualizer(inferenceExampleElement);
+        ndarrayImageVisualizer.setShape(inputShape);
+        ndarrayImageVisualizer.setSize(
+            INFERENCE_IMAGE_SIZE_PX, INFERENCE_IMAGE_SIZE_PX);
+
+        inputNDArrayVisualizers.push(ndarrayImageVisualizer);
+        // inferenceExampleElement.appendChild(ndarrayImageVisualizer);
+
+        // Set up the output ndarray visualizer.
+        const ndarrayLogitsVisualizer = new NDArrayLogitsVisualizer(inferenceExampleElement, 3);
+        document.createElement('ndarray-logits-visualizer');
+        ndarrayLogitsVisualizer.initialize(
+            INFERENCE_IMAGE_SIZE_PX, INFERENCE_IMAGE_SIZE_PX);
+        outputNDArrayVisualizers.push(ndarrayLogitsVisualizer);
+        // inferenceExampleElement.appendChild(ndarrayLogitsVisualizer);
+
+        inferenceContainer.appendChild(inferenceExampleElement);
+    }
+
 
     math = mathGPU;
 
@@ -478,13 +406,66 @@ function buildModel() {
 
     // });
 
-
     batchSize = 30;
     initialLearningRate = 0.1;
     // optimizer = new SGDOptimizer(initialLearningRate);
     var momentum = 0.1;
     optimizer = new MomentumOptimizer(initialLearningRate, momentum);
 
+    modelInitialized = true;
+}
+
+function populateDatasets(callback) {
+    dataSets = {};
+    xhr_dataset.getXhrDatasetConfig(DATASETS_CONFIG_JSON)
+        .then(_xhrDatasetConfigs => {
+                for (const datasetName in _xhrDatasetConfigs) {
+                    if (_xhrDatasetConfigs.hasOwnProperty(datasetName)) {
+                        dataSets[datasetName] =
+                            new XhrDataset(_xhrDatasetConfigs[datasetName]);
+                    }
+                }
+                var datasetNames = Object.keys(dataSets);
+                xhrDatasetConfigs = _xhrDatasetConfigs;
+                selectedDatasetName = datasetNames[0]
+                dataSet = dataSets[selectedDatasetName]; //MNIST
+
+                dataSet.fetchData().then(() => {
+                    datasetDownloaded = true;
+                    dataSet.normalizeWithinBounds(IMAGE_DATA_INDEX, -1, 1)
+                    callback();
+                });
+
+                inputShape = dataSet.getDataShape(IMAGE_DATA_INDEX);
+                labelShape = dataSet.getDataShape(LABEL_DATA_INDEX);
+            },
+            error => {
+                throw new Error(`Dataset config could not be loaded: ${error}`);
+            });
+}
+
+
+
+function run() {
+
+    mathGPU = new NDArrayMathGPU();
+    mathCPU = new NDArrayMathCPU();
+
+    chartData = []
+
+    const canvasElt = document.getElementById('plot');
+    chart = createChart(canvasElt, 'cost', chartData, 0, chartData.y);
+    chart.update();
+
+    btn.addEventListener('click', () => {
+        // Activate, deactivate hyper parameter inputs.
+        paused = !paused;
+        if (paused == false) {
+            request = true;
+        }
+    });
+
+    accuracyElt = document.getElementById('accuracy');
 
     // DOM setup
     learningRateBtn = document.getElementById("learningRateBtn");
@@ -493,6 +474,11 @@ function buildModel() {
         initialLearningRate = parseFloat(document.getElementById("learning-rate-input").value);
     });
 
+
+    function updateSelectedEnvironment(selectedEnvName) {
+        math = (selectedEnvName === 'GPU') ? mathGPU : mathCPU;
+        console.log('math =', math === mathGPU ? 'mathGPU' : 'mathCPU')
+    }
     var envDropdown = document.getElementById("environment-dropdown");
     var selectedEnvName = 'GPU';
     var ind = indexOfDropdownOptions(envDropdown.options, selectedEnvName)
@@ -504,85 +490,107 @@ function buildModel() {
         updateSelectedEnvironment(selectedEnvName);
     });
 
-    const inferenceContainer =
-        document.querySelector('#inference-container');
-    inferenceContainer.innerHTML = '';
-    inputNDArrayVisualizers = [];
-    outputNDArrayVisualizers = [];
-    for (let i = 0; i < INFERENCE_EXAMPLE_COUNT; i++) {
-        const inferenceExampleElement = document.createElement('div');
-        inferenceExampleElement.className = 'inference-example';
+    populateDatasets(buildModel);
+}
 
-        // Set up the input visualizer.
 
-        const ndarrayImageVisualizer = new NDArrayImageVisualizer(inferenceExampleElement);
-        ndarrayImageVisualizer.setShape(inputShape);
-        ndarrayImageVisualizer.setSize(
-            INFERENCE_IMAGE_SIZE_PX, INFERENCE_IMAGE_SIZE_PX);
-
-        inputNDArrayVisualizers.push(ndarrayImageVisualizer);
-        // inferenceExampleElement.appendChild(ndarrayImageVisualizer);
-
-        // Set up the output ndarray visualizer.
-        const ndarrayLogitsVisualizer = new NDArrayLogitsVisualizer(inferenceExampleElement, 3);
-        document.createElement('ndarray-logits-visualizer');
-        ndarrayLogitsVisualizer.initialize(
-            INFERENCE_IMAGE_SIZE_PX, INFERENCE_IMAGE_SIZE_PX);
-        outputNDArrayVisualizers.push(ndarrayLogitsVisualizer);
-        // inferenceExampleElement.appendChild(ndarrayLogitsVisualizer);
-
-        inferenceContainer.appendChild(inferenceExampleElement);
+function train_per() {
+    if (step > 4242) {
+        // Stop training.
+        return;
     }
 
+    if (paused) return;
 
-    // start training
-    run();
+    // We only fetch the cost every 10 steps because doing so requires a transfer
+    // of data from the GPU.
+
+    const [cost, accuracy] = train1Batch(step % 10 === 0);
+
+    var d = document.getElementById('egdiv');
+    d.innerHTML = 'step = ' + step;
+
+    if (step % 10 === 0) {
+
+        chartData.push({
+            x: step,
+            y: cost
+        });
+
+        config.data.datasets[0].data = chartData;
+        chart.update();
+
+        // Print data to console so the user can inspect.
+        console.log('step', step, 'cost', cost, 'accuracy', accuracy[0]);
+
+        // display accuracy
+        accuracyElt.innerHTML = `accuracy: ${accuracy[0].toFixed(4)*100}%`;
+
+        predict(predictionTensor, inferenceFeedEntries, displayInferenceExamplesOutput);
+
+    }
+
+    step++;
+
+    requestAnimationFrame(() => train_per());
 }
 
-function updateSelectedEnvironment(selectedEnvName, ) {
-    math = (selectedEnvName === 'GPU') ? mathGPU : mathCPU;
-    console.log('math =', math === mathGPU ? 'mathGPU' : 'mathCPU')
+
+var modelInitialized = false;
+
+function monitor() {
+
+    if (datasetDownloaded == false) {
+        btn.disabled = true;
+        btn.value = 'Downloading data ...';
+
+    } else {
+
+        if (modelInitialized) {
+
+            btn.disabled = false;
+
+            if (paused) {
+                btn.value = 'Start'
+            } else {
+                btn.value = 'Stop'
+            }
+
+            if (request) {
+                request = false;
+                train_per();
+            }
+
+            document.getElementById('learning-rate-input').value = learningRate;
+            document.getElementById('egdiv').innerHTML = 'step = ' + step;
+
+        } else {
+            btn.disabled = true;
+            btn.value = 'Initializing Model ...'
+        }
+    }
+
+    setTimeout(function () {
+        monitor();
+    }, 100);
 }
-
-var btn = document.getElementById("buttontp");
-btn.addEventListener('click', () => {
-    // Activate, deactivate hyper parameter inputs.
-    toggle_pause();
-});
-
-
-var accuracyElt = document.getElementById('accuracy');
-
 
 function start() {
 
     supported = detect_support();
 
+    btn = document.getElementById("buttontp");
+
     if (supported) {
         console.log('device & webgl supported')
         btn.disabled = false;
+
+        run();
+        monitor();
+
     } else {
         console.log('device/webgl not supported')
         btn.disabled = true;
     }
-
-    UI_initialized = true;
-    // initializeUi();
-
-    chartData = []
-
-    const canvasElt = document.getElementById('plot');
-    chart = createChart(canvasElt, 'cost', chartData, 0, chartData.y);
-    chart.update();
-    chart_exist = true;
-
-    paused = true;
-
-    // On every frame, we train and then maybe update the UI.
-    step = 0;
-
-    plot_exist = false
-
-    populateDatasets(buildModel);
 
 }
