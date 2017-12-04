@@ -463,6 +463,7 @@ function run() {
         if (paused == false) {
             request = true;
         }
+         ga('send', 'event', 'deeplearn_mnist_starter', 'click', 'Start', 50);
     });
 
     accuracyElt = document.getElementById('accuracy');
