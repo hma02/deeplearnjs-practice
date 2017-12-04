@@ -115,20 +115,20 @@
     }
 
     .inference-example {
-        /* display: flex; */
-        /* justify-content: flex-start; */
-        margin-bottom: 0px;
-        margin-left: 1px
+        display: flex;
+        justify-content: flex-start;
+        margin-bottom: 10px;
+    }
+
+    .inference-example>* {
+        display: table-cell;
+        vertical-align: middle;
     }
     /* ----------------------------*/
 
     .ndarray-image-visualizer {
         flex-basis: 100px;
     }
-    /* .inference-example>* {
-        display: table-cell;
-        vertical-align: middle;
-    } */
 
     .ndarray-logits-visualizer {
         flex-grow: 1;
@@ -241,7 +241,9 @@
             <div class="item row">
                 <div class="col-md-6 col-sm-12 col-xs-12">
                     <h4>ES3/ES5 MNIST Starter</h4>
-                    <p>A single hidden layer feed forward neural network for MNIST digit recognition</p>
+                    <p>A single hidden layer (convolutional or fully connected) feed forward neural network for MNIST digit
+                        recognition
+                    </p>
 
                     <div class="form-group">
                         <label for="environment-dropdown">Environment</label>

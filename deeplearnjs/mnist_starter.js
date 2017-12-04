@@ -8,6 +8,8 @@ var track = dl.track;
 var keep = dl.keep;
 var InCPUMemoryShuffledInputProviderBuilder = dl.InCPUMemoryShuffledInputProviderBuilder;
 var SGDOptimizer = dl.SGDOptimizer;
+var MomentumOptimizer = dl.MomentumOptimizer;
+var optimizer;
 var CostReduction = dl.CostReduction;
 var Array1D = dl.Array1D;
 var Array4D = dl.Array4D;
@@ -63,7 +65,7 @@ function createFullyConnectedLayer(
     return out;
 }
 
-function createConv2dLayer(graph, inputLayer, layerIndex, outputDepth, inputShape, filterSize = 2, stride = 2, zeroPad = 0, activation = (x) => graph.relu(x), includeBias = true) {
+function createConv2dLayer(graph, inputLayer, layerIndex, outputDepth, inputShape, filterSize = 2, stride = 2, zeroPad = 0, activation = (x) => graph.relu(x)) {
 
     // input must be Array3D: x,y,h
 
@@ -98,8 +100,10 @@ function createMaxPoolLayer(graph, inputLayer, layerIndex, inputShape, filterSiz
 
 function createFlattenLayer(graph, inputLayer, layerIndex, inputShape) {
 
-    let size = [util.sizeFromShape(inputShape)];
-    let out = graph.reshape(inputLayer, size);
+    let size = util.sizeFromShape(inputShape);
+    let out = graph.reshape(inputLayer, [size]);
+
+    out.outputShape = [size];
     return out;
 }
 
@@ -146,6 +150,7 @@ function train1Batch(shouldFetchCost) {
 
     // Train 1 batch.
     let costValue = -1;
+    let metric = Scalar.new(0);
     math.scope(() => {
         const cost = session.train(
             costTensor, feedEntries, batchSize, optimizer,
@@ -159,9 +164,22 @@ function train1Batch(shouldFetchCost) {
         // Compute the cost (by calling get), which requires transferring data
         // from the GPU.
         costValue = cost.get();
+
+        // calculate accuracy
+
+        for (let i = 0; i < batchSize; i++) {
+            const metricValue = session.eval(accuracyTensor, inferenceFeedEntries);
+
+            metric = math.add(metric, metricValue);
+        }
+
+        metric = math.divide(metric, Scalar.new(batchSize));
+
+        metric = metric.getValues();
+
     });
 
-    return costValue;
+    return [costValue, metric];
 }
 
 function predict(predictionTensor, feedEntries, callback) {
@@ -186,33 +204,18 @@ function predict(predictionTensor, feedEntries, callback) {
 
         inferenceValues[inferenceValues.length - 1].getValues();
 
-
-        // calculate accuracy
-        let metric = Scalar.new(0);
-
-        for (let i = 0; i < batchSize; i++) {
-            const metricValue =
-                session.eval(accuracyTensor, ndarrayFeedEntries);
-
-            metric = math.add(metric, metricValue);
-        }
-
-        metric = math.divide(metric, Scalar.new(batchSize));
-
-        metric = metric.getValues();
-
         // values = Array.prototype.slice.call(values);
 
         // console.log('values2', values)
 
-        callback(feeds, inferenceValues, metric)
+        callback(feeds, inferenceValues)
 
     });
     return
 }
 
 
-function displayInferenceExamplesOutput(inputFeeds, inferenceOutputs, metric) {
+function displayInferenceExamplesOutput(inputFeeds, inferenceOutputs) {
     let images = [];
     const logits = [];
     const labels = [];
@@ -243,10 +246,6 @@ function displayInferenceExamplesOutput(inputFeeds, inferenceOutputs, metric) {
 
         softmaxLogits.dispose();
     }
-
-    // display accuracy
-    accuracyElt.innerHTML = `accuracy: ${metric}`
-
 
 }
 
@@ -316,7 +315,7 @@ function train_per() {
     // We only fetch the cost every 10 steps because doing so requires a transfer
     // of data from the GPU.
 
-    cost = train1Batch(step % 10 === 0);
+    const [cost, accuracy] = train1Batch(step % 10 === 0);
 
     var d = document.getElementById('egdiv');
     d.innerHTML = 'step = ' + step;
@@ -332,7 +331,10 @@ function train_per() {
         chart.update();
 
         // Print data to console so the user can inspect.
-        console.log('step', step, 'cost', cost);
+        console.log('step', step, 'cost', cost, 'accuracy', accuracy);
+
+        // display accuracy
+        accuracyElt.innerHTML = `accuracy: ${accuracy[0].toFixed(4)*100}%`;
 
         predict(predictionTensor, inferenceFeedEntries, displayInferenceExamplesOutput);
 
@@ -447,16 +449,48 @@ function buildModel() {
 
     accuracyTensor = graph.argmaxEquals(predictionTensor, targetTensor);
 
+
+    // math.scope((keep, track) => {
+
+    //     var thisfeedEntries = [{
+    //             tensor: feedEntries[IMAGE_DATA_INDEX].tensor,
+    //             data: track((feedEntries[IMAGE_DATA_INDEX].data).getNextCopy(math))
+    //         },
+    //         {
+    //             tensor: feedEntries[LABEL_DATA_INDEX].tensor,
+    //             data: track((feedEntries[LABEL_DATA_INDEX].data).getNextCopy(math))
+    //         }
+    //     ]
+
+    //     res = session.eval(net1, thisfeedEntries);
+    //     console.log('net1', res.getValues(), net1.outputShape);
+    //     res = session.eval(net2, thisfeedEntries);
+    //     console.log('net2', res.getValues(), net2.outputShape);
+    //     res = session.eval(net3, thisfeedEntries);
+    //     console.log('net3', res.getValues(), net3.outputShape);
+    //     res = session.eval(predictionTensor, thisfeedEntries);
+    //     console.log('predictionTensor', res.getValues(), labelShape[0]);
+
+    //     res = session.eval(costTensor, thisfeedEntries);
+    //     console.log('costTensor', res.getValues());
+
+    //     res = session.eval(accuracyTensor, thisfeedEntries);
+    //     console.log('accuracyTensor', res.getValues());
+
+    // });
+
+
     batchSize = 30;
     initialLearningRate = 0.1;
-    optimizer = new SGDOptimizer(initialLearningRate);
+    // optimizer = new SGDOptimizer(initialLearningRate);
+    var momentum = 0.1;
+    optimizer = new MomentumOptimizer(initialLearningRate, momentum);
 
     learningRateBtn = document.getElementById("learningRateBtn");
     learningRateBtn.addEventListener('click', () => {
         // Activate, deactivate hyper parameter inputs.
         changeNetParam();
     });
-
 
 
     const inferenceContainer =
@@ -488,7 +522,6 @@ function buildModel() {
 
         inferenceContainer.appendChild(inferenceExampleElement);
     }
-
 
     run();
 }
