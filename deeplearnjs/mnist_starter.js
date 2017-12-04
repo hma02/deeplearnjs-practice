@@ -10,6 +10,10 @@ var InCPUMemoryShuffledInputProviderBuilder = dl.InCPUMemoryShuffledInputProvide
 var SGDOptimizer = dl.SGDOptimizer;
 var MomentumOptimizer = dl.MomentumOptimizer;
 var optimizer;
+var learningRate;
+var initialLearningRate;
+
+
 var CostReduction = dl.CostReduction;
 var Array1D = dl.Array1D;
 var Array4D = dl.Array4D;
@@ -130,8 +134,6 @@ function populateDatasets(callback) {
 
 function updateSelectedDataset(callback) {
 
-    var datasetDownloaded = false;
-
     dataSet.fetchData().then(() => {
         datasetDownloaded = true;
         dataSet.normalizeWithinBounds(IMAGE_DATA_INDEX, -1, 1)
@@ -145,7 +147,7 @@ function updateSelectedDataset(callback) {
 
 function train1Batch(shouldFetchCost) {
     // Every 42 steps, lower the learning rate by 15%.
-    const learningRate = initialLearningRate * Math.pow(0.95, Math.floor(step / 82));
+    learningRate = initialLearningRate * Math.pow(0.95, Math.floor(step / 82));
     optimizer.setLearningRate(learningRate);
 
     // Train 1 batch.
@@ -250,7 +252,7 @@ function displayInferenceExamplesOutput(inputFeeds, inferenceOutputs) {
 }
 
 var updateNetParamDisplay = function () {
-    document.getElementById('learning-rate-input').value = initialLearningRate;
+    document.getElementById('learning-rate-input').value = learningRate;
     document.getElementById('egdiv').innerHTML = 'step = ' + step;
     // document.getElementById('batch_size_input').value = batchSize;
     // // document.getElementById('decay_input').value = trainer.l2_decay;
@@ -370,10 +372,12 @@ function run() {
 }
 
 
+var mathGPU = new NDArrayMathGPU();;
+var mathCPU = new NDArrayMathCPU();;
 
 function buildModel() {
 
-    math = new NDArrayMathGPU();
+    math = mathGPU;
 
     graph = new Graph();
 
@@ -430,23 +434,18 @@ function buildModel() {
     if (netType == 'Fully Connected') {
 
         net = createFlattenLayer(graph, net, layerIndex++, inputShape);
-
         net = createFullyConnectedLayer(graph, net, layerIndex++, 128); // hidden layer
 
     } else if (netType == 'Convolutional') {
 
         net = createConv2dLayer(graph, net, layerIndex++, 16, inputShape, 5, 1, 2); // hidden layer
-
         net = createMaxPoolLayer(graph, net, layerIndex++, net.outputShape, 2, 2, 0);
-
         net = createFlattenLayer(graph, net, layerIndex++, net.outputShape);
 
     }
 
     predictionTensor = createFullyConnectedLayer(graph, net, layerIndex++, labelShape[0]);
-
     costTensor = graph.softmaxCrossEntropyCost(predictionTensor, targetTensor);
-
     accuracyTensor = graph.argmaxEquals(predictionTensor, targetTensor);
 
 
@@ -486,12 +485,24 @@ function buildModel() {
     var momentum = 0.1;
     optimizer = new MomentumOptimizer(initialLearningRate, momentum);
 
+
+    // DOM setup
     learningRateBtn = document.getElementById("learningRateBtn");
     learningRateBtn.addEventListener('click', () => {
         // Activate, deactivate hyper parameter inputs.
-        changeNetParam();
+        initialLearningRate = parseFloat(document.getElementById("learning-rate-input").value);
     });
 
+    var envDropdown = document.getElementById("environment-dropdown");
+    var selectedEnvName = 'GPU';
+    var ind = indexOfDropdownOptions(envDropdown.options, selectedEnvName)
+    envDropdown.options[ind].selected = 'selected';
+    updateSelectedEnvironment(selectedEnvName);
+
+    envDropdown.addEventListener('change', (event) => {
+        selectedEnvName = event.target.value;
+        updateSelectedEnvironment(selectedEnvName);
+    });
 
     const inferenceContainer =
         document.querySelector('#inference-container');
@@ -523,9 +534,15 @@ function buildModel() {
         inferenceContainer.appendChild(inferenceExampleElement);
     }
 
+
+    // start training
     run();
 }
 
+function updateSelectedEnvironment(selectedEnvName, ) {
+    math = (selectedEnvName === 'GPU') ? mathGPU : mathCPU;
+    console.log('math =', math === mathGPU ? 'mathGPU' : 'mathCPU')
+}
 
 var btn = document.getElementById("buttontp");
 btn.addEventListener('click', () => {
