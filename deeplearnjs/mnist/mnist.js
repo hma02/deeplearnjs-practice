@@ -256,7 +256,7 @@ function startTraining() {
     // Recreate optimizer with the selected optimizer and hyperparameters.
     optimizer = createOptimizer();
 
-    if (this.isValid && (trainingData != null) && (testData != null)) {
+    if (isValid && (trainingData != null) && (testData != null)) {
         // recreateCharts();
         graphRunner.resetStatistics();
 
@@ -266,11 +266,11 @@ function startTraining() {
         trainingShuffledInputProviderGenerator.getInputProviders();
 
         const trainFeeds = [{
-                tensor: this.xTensor,
+                tensor: xTensor,
                 data: trainInputProvider
             },
             {
-                tensor: this.labelTensor,
+                tensor: labelTensor,
                 data: trainLabelProvider
             }
         ];
@@ -281,11 +281,11 @@ function startTraining() {
         accuracyShuffledInputProviderGenerator.getInputProviders();
 
         const accuracyFeeds = [{
-                tensor: this.xTensor,
+                tensor: xTensor,
                 data: accuracyInputProvider
             },
             {
-                tensor: this.labelTensor,
+                tensor: labelTensor,
                 data: accuracyLabelProvider
             }
         ];

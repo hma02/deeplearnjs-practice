@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <!-- Google Analytics -->
+    <script async src="https://www.google-analytics.com/analytics.js"></script>
+    <script async src="assets/plugins/autotrack.js"></script>
+    <script>
+        window.ga = window.ga || function () {
+            (ga.q = ga.q || []).push(arguments)
+        };
+        ga.l = +new Date;
+        ga('create', 'UA-108549242-1', 'auto');
+
+        // Replace the following lines with the plugins you want to use.
+        // ga('require', 'eventTracker');
+        // ga('require', 'outboundLinkTracker');
+        // ga('require', 'urlChangeTracker');
+        // ...
+
+        ga('send', 'pageview');
+    </script>
+    <!-- End Google Analytics -->
+
+    <!-- Meta -->
+    <title>DeeplearnJS Practice -- MNIST Starter</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="shortcut icon" href="favicon.ico">
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,500,400italic,300italic,300,500italic,700,700italic,900,900italic'
+        rel='stylesheet' type='text/css'>
+    <!-- Global CSS -->
+    <link rel="stylesheet" href="assets/plugins/bootstrap/css/bootstrap.min.css">
+    <!-- Plugins CSS -->
+    <link rel="stylesheet" href="assets/plugins/font-awesome/css/font-awesome.css">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <!-- Theme CSS -->
+    <link id="theme-style" rel="stylesheet" href="assets/css/styles.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.bundle.min.js"></script>
+
+
+</head>
+
+<style>
+    .main-wrapper {
+        background: #fff;
+        padding: 30px;
+        padding-right: 300px;
+    }
+
+    @media (max-width: 767px) {
+        .wrapper {
+            max-width: 95%;
+        }
+        .main-wrapper {
+            padding: 20px;
+        }
+        .main-wrapper .time {
+            position: static;
+            display: block;
+            margin-top: 10px;
+        }
+    }
+
+    .box {
+        width: 99%;
+        /* height: 200px; */
+        background: #FFF;
+        /* margin: 40px auto; */
+    }
+
+    .effect6 {
+        /* position: relative; */
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 0, 0, 0.1) inset;
+    }
+
+    .effect6:before,
+    .effect6:after {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+        top: 50%;
+        bottom: 0;
+        left: 10px;
+        right: 10px;
+        border-radius: 100px / 10px;
+    }
+
+    .title {
+        align-items: center;
+        /* border-bottom: 1px solid rgba(0, 0, 0, 0.1); */
+        color: black;
+        display: flex;
+        /* font-weight: 500; */
+        /* height: 20px; */
+        /* min-height: 20px; */
+        /* padding-top: 10px; */
+        padding-bottom: 10px;
+        /* padding-left: 20px; */
+        text-transform: uppercase;
+    }
+
+    .subtitle {
+        font-size: 15px;
+        font-weight: bold;
+    }
+
+    .train-stats-message {
+        line-height: 1.67em;
+    }
+
+    .inference-example {
+        /* display: flex; */
+        /* justify-content: flex-start; */
+        margin-bottom: 0px;
+        margin-left: 1px
+    }
+    /* ----------------------------*/
+
+    .ndarray-image-visualizer {
+        flex-basis: 100px;
+    }
+    /* .inference-example>* {
+        display: table-cell;
+        vertical-align: middle;
+    } */
+
+    .ndarray-logits-visualizer {
+        flex-grow: 1;
+    }
+
+    .logit {
+        font-size: 21px;
+    }
+
+    .logit-label {
+        color: #414141;
+        font-size: 18px;
+        line-height: 18px;
+        margin: 4px;
+        display: inline-block;
+        width: 100px;
+    }
+
+    .single-logit-container {
+        display: flex;
+    }
+
+    .logit-viz-outer {
+        flex-grow: 1;
+    }
+
+    .logit-viz-inner {
+        vertical-align: middle;
+        padding: 4px;
+    }
+</style>
+
+
+
+<body onload="start()">
+
+    <!--Navigation bar-->
+    <div id="nav-placeholder">
+    </div>
+    <!--end of Navigation bar-->
+
+    <div class="wrapper" id="wrap">
+
+        <div class="sidebar-wrapper" style="min-height:600px">
+
+            <div class="contact-container container-block">
+                <div class="jumbotron">
+                    <h2>
+                        Deeplearnjs Practice</h2>
+                    <p style='font-size:1.2em'>This demo is a starter project of using deeplearnjs. It is shows how to construct a simple feed forward
+                        neural network and train it in deeplearnjs.
+                    </p>
+                </div>
+                <p>Last Update: 2017-12-01</p>
+
+                <p>
+                    <a href="https://github.com/hma02/Ueval/blob/master/LICENSE">Ueval's MIT License</a>
+                </p>
+
+                <p>
+                    <a href="https://github.com/PAIR-code/deeplearnjs/blob/master/LICENSE">DeeplearnJS's Apache License</a>
+                </p>
+
+            </div>
+
+        </div>
+
+        <div class="main-wrapper" style="min-height:600px">
+
+            <a href="https://github.com/hma02/Ueval" class="github-corner" aria-label="View source on Github">
+                <svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;"
+                    aria-hidden="true">
+                    <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+                    <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+                        fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+                    <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+                        fill="currentColor" class="octo-body"></path>
+                </svg>
+            </a>
+            <style>
+                .github-corner:hover .octo-arm {
+                    animation: octocat-wave 560ms ease-in-out
+                }
+
+                @keyframes octocat-wave {
+                    0%,
+                    100% {
+                        transform: rotate(0)
+                    }
+                    20%,
+                    60% {
+                        transform: rotate(-25deg)
+                    }
+                    40%,
+                    80% {
+                        transform: rotate(10deg)
+                    }
+                }
+
+                @media (max-width:500px) {
+                    .github-corner:hover .octo-arm {
+                        animation: none
+                    }
+                    .github-corner .octo-arm {
+                        animation: octocat-wave 560ms ease-in-out
+                    }
+                }
+            </style>
+
+            <div class="item row">
+                <div class="col-md-6 col-sm-12 col-xs-12">
+                    <h4>ES3/ES5 MNIST Starter</h4>
+                    <p>A single hidden layer feed forward neural network for MNIST digit recognition</p>
+
+                    <div class="form-group">
+                        <label for="environment-dropdown">Environment</label>
+                        <select class="form-control" id="environment-dropdown">
+                            <option value="CPU">CPU</option>
+                            <option value="GPU">GPU</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="learning-rate-input" class="control-label">Learning Rate</label>
+                        <div class="controls">
+                            <div class="input-group">
+                                <input name="lri" type="text" class="form-control" id="learning-rate-input" placeholder="learning rate 0.0001 ~ 0.5 ">
+                                <div class="input-group-btn">
+                                    <button class="btn btn-default" id="learningRateBtn" type="submit">Change</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <br>
+                    <br>
+                    <input class="btn btn-default btn-md paper" data-toggle="tooltip" title="Start/Stop training" id="buttontp" type="submit"
+                        value="Start Training" />
+                    <br>
+                    <br>
+
+                    <div id="egdiv"></div>
+                    <div id='accuracy'></div>
+
+                </div>
+                <div class="col-md-6 col-sm-12 col-xs-12">
+
+                    <div id="inference-container"></div>
+
+                    <h4 class="title">
+                        <a>Cost Plot</a>
+                    </h4>
+                    <!-- width="400" height="300" -->
+                    <canvas id="plot" width="400" height="300"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <footer class="footer">
+        <div class="text-center">
+            <small class="copyright">&copy; 2017 Allan H. Ma</small>
+        </div>
+        <!--//container-->
+    </footer>
+
+
+    <!-- Javascript -->
+    <script type="text/javascript" src="assets/plugins/jquery-1.11.3.min.js"></script>
+    <script type="text/javascript" src="assets/plugins/bootstrap/js/bootstrap.min.js"></script>
+
+    <!-- custom js -->
+    <script type="text/javascript" src="assets/js/nav.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('[data-toggle="tooltip"]').tooltip();
+        });
+    </script>
+
+
+    <script src="https://unpkg.com/deeplearn"></script>
+    <!-- detect browser support -->
+    <script src="deeplearnjs/support.js"></script>
+    <script src="deeplearnjs/utils.js"></script>
+
+
+
+    <script type="text/javascript" src="deeplearnjs/mnist_starter.js"></script>
+
+
+</body>
+
+</html>
