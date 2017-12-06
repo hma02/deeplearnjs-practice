@@ -504,9 +504,9 @@ function populateDatasets() {
                     }
                 }
                 var datasetNames = Object.keys(dataSets);
-                var selectedDatasetName = datasetNames[0];
+                selectedDatasetName = datasetNames[0];
                 xhrDatasetConfigs = _xhrDatasetConfigs;
-                updateSelectedDataset(datasetNames[0]);
+                updateSelectedDataset(selectedDatasetName);
             },
             error => {
                 throw new Error(`Dataset config could not be loaded: ${error}`);
