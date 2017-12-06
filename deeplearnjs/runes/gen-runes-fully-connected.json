@@ -1,0 +1,12 @@
+[{
+    "layerName": "Fully connected",
+    "hiddenUnits": 256
+}, {
+    "layerName": "ReLU"
+}, {
+    "layerName": "Fully connected",
+    "hiddenUnits": 1024
+}, {
+    "layerName": "Reshape",
+    "outputShape": [32, 32, 1]
+}]

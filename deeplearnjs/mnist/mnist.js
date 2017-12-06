@@ -311,7 +311,7 @@ function startInference() {
         return;
     }
     if (isValid && (testData != null)) {
-        console.log(testData);
+        // console.log(testData);
         const inferenceShuffledInputProviderGenerator =
             new InCPUMemoryShuffledInputProviderBuilder(testData);
         const [inferenceInputProvider, inferenceLabelProvider] =

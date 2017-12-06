@@ -45,12 +45,12 @@
     "Runes": {
         "data": [{
             "name": "images",
-            "path": "deeplearnjs/mnist/runes/rune_images.png",
+            "path": "deeplearnjs/runes/rune_images.png",
             "dataType": "png",
             "shape": [32, 32, 1]
         }, {
             "name": "labels",
-            "path": "deeplearnjs/mnist/runes/rune_labels",
+            "path": "deeplearnjs/runes/rune_labels",
             "dataType": "uint8",
             "shape": [90]
         }],
@@ -59,10 +59,10 @@
         ],
         "modelConfigs": {
             "Fully connected": {
-                "path": "deeplearnjs/mnist/runes/runes-fully-connected.json"
+                "path": "deeplearnjs/runes/runes-fully-connected.json"
             },
             "Convolutional": {
-                "path": "deeplearnjs/mnist/runes/runes-conv.json"
+                "path": "deeplearnjs/runes/runes-conv.json"
             }
         }
     },
