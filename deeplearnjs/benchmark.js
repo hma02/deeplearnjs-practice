@@ -61,6 +61,11 @@ chart.update();
 var table = document.getElementById(`divTable`);
 init_table(table, ['Size', 't1 (ms)', 't2 (ms)']);
 
+
+// function dump_json(weightJSON) {
+//     document.getElementById("dumpjson").value = JSON.stringify(weightJSON);
+// }
+
 class ConvBenchmark {
 
     constructor(libName) {
@@ -106,9 +111,9 @@ class ConvBenchmark {
         }
 
         if (outputRows <= 0) {
-            console.log(`input size ${size} doesn't satisfy assertion outputRows>0, given inputRows=${size}, filterSize=${filterSize}, zeroPad=${zeroPad}, stride=${stride}, minimal size needs to be ${filterSize + 2 * zeroPad - stride}`)
+            // console.log(`input size ${size} doesn't satisfy assertion outputRows>0, given inputRows=${size}, filterSize=${filterSize}, zeroPad=${zeroPad}, stride=${stride}, minimal size needs to be ${filterSize + 2 * zeroPad - stride}`)
         } else if (!isInt(outputRows)) {
-            console.log(`outputRows ${outputRows} is not int`)
+            // console.log(`outputRows ${outputRows} is not int`)
         }
 
         function find_min_pad(i, f, s) {
@@ -116,14 +121,14 @@ class ConvBenchmark {
             for (let n = 0;; n++) {
                 var z = (n * s - i + f) / 2;
                 if (z > 0) {
-                    console.log('found suitable z=' + z)
+                    // console.log('found suitable z=' + z)
                     return z
                 }
             }
 
         }
         zeroPad = find_min_pad(size, filterSize, stride);
-        console.log(`min pad ${zeroPad} applied`)
+        // console.log(`min pad ${zeroPad} applied`)
 
         let benchmark;
         let out;
@@ -138,6 +143,7 @@ class ConvBenchmark {
                     inDepth, params.outDepth, filterSize, filterSize);
                 var W = Array4D.randUniform(wShape, -1, 1);
                 // const b = Array1D.randUniform([outDepth], -1, 1);
+                // console.log(W.getValues(), W.shape, x.getValues(), x.shape)
 
                 benchmark = () => {
                     out = math.conv2d(x, W, null, stride, zeroPad); //bias=null, pad =0, this padding will be applied on four borders of input : left right top bottom
@@ -188,27 +194,13 @@ class ConvBenchmark {
             }; // no bias, pad=0
             var layer = new convnetjs.ConvLayer(opt);
 
+            // console.log(layer)
+
             benchmark = () => {
                 out = layer.forward(x);
             }
 
         }
-
-        const cleanup = () => {
-
-            if (this.libName === 'dljs') {
-                x.dispose();
-                W.dispose();
-                out.dispose();
-                if (b != null) {
-                    b.dispose();
-                }
-            } else {
-                x = null;
-                out = null;
-            }
-
-        };
 
         if (this.libName === 'dljs') {
             // Warmup.
@@ -239,7 +231,24 @@ class ConvBenchmark {
             totalTime = performance.now() - start;
         }
 
-        console.log(`${this.libName} convolution output: ${out}`)
+        // console.log(`${this.libName} convolution output: ${out}`)
+
+        const cleanup = () => {
+
+            if (this.libName === 'dljs') {
+                x.dispose();
+                W.dispose();
+                out.dispose();
+                if (b != null) {
+                    b.dispose();
+                }
+            } else {
+                x = null;
+                out = null;
+            }
+
+        };
+
         cleanup();
         return totalTime;
     }
@@ -370,6 +379,7 @@ function run() {
 function start() {
 
     supported = detect_support();
+    // supported = true;
 
     if (supported) {
         console.log('device & webgl supported')
