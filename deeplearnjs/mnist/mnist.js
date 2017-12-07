@@ -382,6 +382,11 @@ function createModel() {
     modelInitialized = true;
 }
 
+function removeAllLayerTableRow(elt) {
+    while (elt.hasChildNodes()) {
+        elt.removeChild(elt.lastChild);
+    }
+}
 
 function insertLayerTableRow(elt, name, inShape, outShape) {
 
@@ -448,14 +453,17 @@ function updateSelectedDataset(datasetName) {
     layersContainer = document.querySelector('#hidden-layers');
 
     var inputLayer = document.querySelector('#input-layer');
+    removeAllLayerTableRow(inputLayer);
     insertLayerTableRow(inputLayer, 'input-layer', null, getDisplayShape(inputShape));
 
     labelShapeDisplay = getDisplayShape(labelShape);
 
     const costLayer = document.querySelector('#cost-layer');
+    removeAllLayerTableRow(costLayer);
     insertLayerTableRow(costLayer, 'cost-layer', labelShapeDisplay, labelShapeDisplay);
 
     const outputLayer = document.querySelector('#output-layer');
+    removeAllLayerTableRow(outputLayer);
     insertLayerTableRow(outputLayer, 'output-layer', labelShapeDisplay, null);
 
     // Setup the inference example container.
@@ -1080,9 +1088,9 @@ function monitor() {
             }
 
         } else {
-            btn_infer.className = 'btn btn-danger btn-md';
+            // btn_infer.className = 'btn btn-danger btn-md';
             btn_infer.disabled = true;
-            btn_infer.value = 'Model not valid'
+            btn_infer.value = 'Model not valid or being reinitialized'
             // btn_train.disabled = true;
             btn_train.style.visibility = 'hidden';
         }
