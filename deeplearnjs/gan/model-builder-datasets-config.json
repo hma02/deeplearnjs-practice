@@ -13,16 +13,16 @@
         }],
         "modelConfigs": {
             "Fully connected (disc)": {
-                "path": "deeplearnjs/gan/mnist-fully-connected.json"
+                "path": "deeplearnjs/gan/mnist/mnist-fully-connected.json"
             },
             "Fully connected (gen)": {
-                "path": "deeplearnjs/gan/gen-mnist-fully-connected.json"
+                "path": "deeplearnjs/gan/mnist/gen-mnist-fully-connected.json"
             },
             "Convolutional (disc)": {
-                "path": "deeplearnjs/gan/mnist-conv.json"
+                "path": "deeplearnjs/gan/mnist/mnist-conv.json"
             },
             "Convolutional (gen)": {
-                "path": "deeplearnjs/gan/gen-mnist-conv.json"
+                "path": "deeplearnjs/gan/mnist/gen-mnist-conv.json"
             }
         }
     },
@@ -41,16 +41,16 @@
         "labelClassNames": ["T-shirt/top", "Trouser", "Pullover", "Dress", "Coat", "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot"],
         "modelConfigs": {
             "Fully connected (disc)": {
-                "path": "deeplearnjs/gan/mnist-fully-connected.json"
+                "path": "deeplearnjs/gan/mnist/mnist-fully-connected.json"
             },
             "Fully connected (gen)": {
-                "path": "deeplearnjs/gan/gen-mnist-fully-connected.json"
+                "path": "deeplearnjs/gan/mnist/gen-mnist-fully-connected.json"
             },
             "Convolutional (disc)": {
-                "path": "deeplearnjs/gan/mnist-conv.json"
+                "path": "deeplearnjs/gan/mnist/mnist-conv.json"
             },
             "Convolutional (gen)": {
-                "path": "deeplearnjs/gan/gen-mnist-conv.json"
+                "path": "deeplearnjs/gan/mnist/gen-mnist-conv.json"
             }
         }
     },
@@ -71,16 +71,16 @@
         ],
         "modelConfigs": {
             "Fully connected (disc)": {
-                "path": "deeplearnjs/runes/runes-fully-connected.json"
+                "path": "deeplearnjs/gan/runes/runes-fully-connected.json"
             },
             "Convolutional (disc)": {
-                "path": "deeplearnjs/runes/runes-conv.json"
+                "path": "deeplearnjs/gan/runes/runes-conv.json"
             },
             "Fully connected (gen)": {
-                "path": "deeplearnjs/runes/gen-runes-fully-connected.json"
+                "path": "deeplearnjs/gan/runes/gen-runes-fully-connected.json"
             },
             "Convolutional (gen)": {
-                "path": "deeplearnjs/runes/gen-runes-conv.json"
+                "path": "deeplearnjs/gan/runes/gen-runes-conv.json"
             }
         }
     },

@@ -16,6 +16,11 @@
  */
 
 
+function removeAllLayerTableRow(elt) {
+    while (elt.hasChildNodes()) {
+        elt.removeChild(elt.lastChild);
+    }
+}
 
 function insertLayerTableRow(elt, name, inShape, outShape) {
 
@@ -724,27 +729,33 @@ function updateSelectedDataset(datasetName) {
 
     // DISC
     inputLayer = document.querySelector('#input-layer');
+    removeAllLayerTableRow(inputLayer);
     insertLayerTableRow(inputLayer, 'input-layer', null, getDisplayShape(inputShape));
 
     const labelShapeDisplay =
         getDisplayShape(labelShape);
     const costLayer = document.querySelector('#cost-layer');
+    removeAllLayerTableRow(costLayer);
     insertLayerTableRow(costLayer, 'cost-layer', labelShapeDisplay, labelShapeDisplay);
 
     const outputLayer = document.querySelector('#output-layer');
+    removeAllLayerTableRow(outputLayer);
     insertLayerTableRow(outputLayer, 'output-layer', labelShapeDisplay, null);
 
     // GEN
     genInputLayer = document.querySelector('#gen-input-layer');
     // genInputLayer.outputShapeDisplay =
     //     getDisplayShape(randVectorShape);
+    removeAllLayerTableRow(genInputLayer);
     insertLayerTableRow(genInputLayer, 'gen-input-layer', null, getDisplayShape(randVectorShape));
 
-    const genCostLayer = document.querySelector('#gen-cost-layer');
-    insertLayerTableRow(genCostLayer, 'gen-cost-layer', getDisplayShape(inputShape), getDisplayShape(inputShape));
+    // const genCostLayer = document.querySelector('#gen-cost-layer');
+    // removeAllLayerTableRow(genCostLayer);
+    // insertLayerTableRow(genCostLayer, 'gen-cost-layer', getDisplayShape(inputShape), getDisplayShape(inputShape));
 
     const genOutputLayer = document.querySelector('#gen-output-layer');
-    insertLayerTableRow(genOutputLayer, 'gen-output-layer', labelShapeDisplay, null);
+    removeAllLayerTableRow(genOutputLayer);
+    insertLayerTableRow(genOutputLayer, 'gen-output-layer', getDisplayShape(inputShape), null);
 
     buildRealImageContainer();
     buildFakeImageContainer();
@@ -1499,6 +1510,11 @@ function run() {
         'change', (event) => {
             // Update the model.
 
+            if (graphRunner != null) {
+                graphRunner = null;
+            }
+            graphRunner = new MyGraphRunner(math, session, eventObserver);
+
             const modelName = event.target.value;
             updateSelectedModel(modelName, 'disc');
             console.log('dis model =', modelName)
@@ -1508,6 +1524,11 @@ function run() {
     document.querySelector('#gen-model-dropdown').addEventListener(
         'change', (event) => {
             // Update the model.
+
+            if (graphRunner != null) {
+                graphRunner = null;
+            }
+            graphRunner = new MyGraphRunner(math, session, eventObserver);
 
             const modelName = event.target.value;
             updateSelectedModel(modelName, 'gen');
@@ -1739,7 +1760,7 @@ function monitor() {
             }
 
         } else {
-            btn_infer.className = 'btn btn-danger btn-md';
+            // btn_infer.className = 'btn btn-danger btn-md';
             btn_infer.disabled = true;
             btn_infer.value = 'Model not valid or being reinitialized'
             // btn_train.disabled = true;
