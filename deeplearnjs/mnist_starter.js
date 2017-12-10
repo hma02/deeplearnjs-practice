@@ -11,7 +11,6 @@ var SGDOptimizer = dl.SGDOptimizer;
 var MomentumOptimizer = dl.MomentumOptimizer;
 var optimizer;
 var learningRate;
-var initialLearningRate;
 
 var CostReduction = dl.CostReduction;
 var Array1D = dl.Array1D;
@@ -122,7 +121,7 @@ function createFlattenLayer(graph, inputLayer, layerIndex, inputShape) {
 
 function train1Batch(shouldFetchCost) {
     // Every 42 steps, lower the learning rate by 15%.
-    learningRate = initialLearningRate * Math.pow(0.95, Math.floor(step / 82));
+    // learningRate = initialLearningRate * Math.pow(0.95, Math.floor(step / 82));
     optimizer.setLearningRate(learningRate);
 
     // Train 1 batch.
@@ -357,7 +356,7 @@ function buildModel() {
     let net = inputTensor;
     let layerIndex = 0;
 
-    let netType = 'Fully Connected';
+    let netType = 'Convolutional';
 
     if (netType == 'Fully Connected') {
 
@@ -407,10 +406,12 @@ function buildModel() {
     // });
 
     batchSize = 30;
-    initialLearningRate = 0.1;
-    // optimizer = new SGDOptimizer(initialLearningRate);
+    learningRate = 0.1;
+    document.getElementById('learning-rate-input').value = learningRate;
+
+    // optimizer = new SGDOptimizer(learningRate);
     var momentum = 0.1;
-    optimizer = new MomentumOptimizer(initialLearningRate, momentum);
+    optimizer = new MomentumOptimizer(learningRate, momentum);
 
     modelInitialized = true;
 }
@@ -472,7 +473,7 @@ function run() {
     learningRateBtn = document.getElementById("learningRateBtn");
     learningRateBtn.addEventListener('click', () => {
         // Activate, deactivate hyper parameter inputs.
-        initialLearningRate = parseFloat(document.getElementById("learning-rate-input").value);
+        learningRate = parseFloat(document.getElementById("learning-rate-input").value);
     });
 
 
@@ -562,7 +563,7 @@ function monitor() {
                 train_per();
             }
 
-            document.getElementById('learning-rate-input').value = learningRate;
+
             document.getElementById('egdiv').innerHTML = 'step = ' + step;
 
         } else {
