@@ -1078,7 +1078,16 @@ function monitor() {
             if (train_request) {
                 train_request = false;
                 // createModel();
-                startTraining();
+                if (graphRunner.getTotalBatchesTrained() > 0) {
+                    graphRunner.resumeTraining()
+                } else {
+                    examplesPerSecGraph.pts = [];
+                    accuracyGraph.pts = [];
+                    lossGraph.pts = [];
+
+                    startTraining();
+                }
+
             }
 
             if (infer_request) {
