@@ -1776,6 +1776,7 @@ function monitor() {
 function start() {
 
     supported = detect_support();
+    supported = true;
 
     if (supported) {
         console.log('device & webgl supported');
