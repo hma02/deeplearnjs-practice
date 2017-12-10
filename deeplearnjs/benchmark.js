@@ -28,64 +28,59 @@ function computeWeightsShape4D(
     return [filterHeight, filterWidth, inputDepth, outputDepth];
 }
 
-const canvas = document.getElementById(`plot`);
-var chart = create_chart(canvas);
-
-chartData = [{
-        label: 'deeplearnjs -- t1',
-        backgroundColor: window.chartColors.red,
-        borderColor: window.chartColors.red,
-        data: [],
-        fill: false,
-        pointRadius: 0,
-        pointHitRadius: 5,
-        borderWidth: 1,
-        lineTension: 0,
-    },
-    {
-        label: "convnetjs -- t2",
-        backgroundColor: window.chartColors.blue,
-        borderColor: window.chartColors.blue,
-        data: [],
-        fill: false,
-        pointRadius: 0,
-        pointHitRadius: 5,
-        borderWidth: 1,
-        lineTension: 0,
-    }
-]
-config.data.datasets = chartData;
-chart.update();
-
-
-var table = document.getElementById(`divTable`);
-init_table(table, ['Size', 't1 (ms)', 't2 (ms)']);
-
-
-// function dump_json(weightJSON) {
-//     document.getElementById("dumpjson").value = JSON.stringify(weightJSON);
-// }
-
 class ConvBenchmark {
 
-    constructor(libName) {
+    constructor(libName, params) {
         this.libName = libName
-        this.btn = document.getElementById('buttontp' + "_" + this.libName);
+        this.index = this.libName === 'dljs' ? 0 : 1;
+
+        this.params = params;
+
         this.paused = true;
-        this.btn.addEventListener('click', (event) => {
-            this.toggle_pause();
+        this.request = false;
+
+        this.size = 16;
+        this.sizes = [];
+
+        this.btn = document.getElementById('buttontp' + "_" + this.libName);
+        this.btn.addEventListener('click', () => {
+            this.paused = !this.paused;
+
+            if (this.paused) {
+                // this.stop_test(); // can return quickly
+            } else {
+                this.request = true;
+            }
+
             ga('send', 'event', 'deeplearn_conv_benchmark', 'click', `Run Benchmark ${this.libName}`, this.libName === 'dljs' ? 30 : 31);
         });
     }
 
-    toggle_pause() {
-        this.paused = !this.paused;
+    monitorRequestAndUpdateUI() {
+
         if (this.paused) {
-            this.btn.value = 'Run Benchmark'
-            this.btn.disabled = false
+            if (this.sizes.length > 0) {
+                this.btn.value = 'Resume';
+            } else {
+                this.btn.value = 'Run Benchmark';
+            }
         } else {
-            this.btn.value = 'Running...';
-            this.btn.disabled = true
+            this.btn.value = 'Pause'
+        }
+
+        if (this.request) {
+            this.request = false;
+
+            if (this.sizes.length > 0) {
+                this.run_test(); //this.resume_test();
+            } else {
+
+                if (chartData[this.index].data.length > 0) {
+                    chartData[this.index].data = [];
+                }
+                this.run_test();
+            }
+
         }
     }
 
@@ -244,128 +239,180 @@ class ConvBenchmark {
         return totalTime;
     }
 
-    run_test(params) {
+    displayResult(size, _time) {
 
-        this.index = this.libName === 'dljs' ? 0 : 1;
+        console.log(size, _time);
 
-        var bmrun = this;
+        let time = _time.toFixed(3);
 
-        const runPromises = [];
-
-        var sizes = [];
-        for (let size = 16; size < 4000; size = size * 2) {
-            var t = bmrun.run(size, 'regular', params)
-            // t.then(data => console.log('conv on size', size, 'time', data, 'us'))
-            runPromises.push(t);
-            sizes.push(size)
-        }
-
-        if (config.data.labels.length !== sizes.length) {
-            init_chart(config, sizes);
-        }
-
-        if (table.rows !== sizes.length + 1) {
-            update_table_col(table, 0, sizes);
-        }
-
-
-        Promise.all(runPromises).then(results => {
-            for (let i = 0; i < results.length; i++) {
-
-                let resultString;
-                let logString;
-                let time = 0;
-                let success = true;
-                let size = sizes[i]
-                try {
-                    time = results[i].toFixed(3);
-                    resultString = time + ' ms';
-                    logString = resultString;
-                } catch (e) {
-                    success = false;
-                    resultString = 'Error';
-                    logString = e.message;
-                }
-
-                if (time >= 0) {
-                    if (success) {
-                        chartData[bmrun.index].data.push(
-                            // {
-                            // x: size,
-                            // y: time
-                            // }
-                            time
-                        );
-
-                    }
-                    // rowValues.push(resultString);
-                }
-                console.log(`[${size}]: ${logString}`);
-
-            }
-
-            var resultStringArray = [];
-            chartData[bmrun.index].data.forEach((time) => {
-                resultStringArray.push(time);
-            })
-
-            update_table_col(table, bmrun.index + 1, resultStringArray); // col0 is the size labels
-            config.data.datasets = chartData;
-
-            chart.update();
-
+        chartData[this.index].data.push({
+            x: size,
+            y: time
         });
 
-        bmrun.toggle_pause();
+        // sort the array again, in case sizes do not come in ascending order from the async promises
+        chartData[this.index].data.sort(function (a, b) {
+            // Compare the 2 dates
+            if (a.x < b.x) return -1;
+            if (a.x > b.x) return 1;
+            return 0;
+        });
+
+        config.data.datasets = chartData;
+
+        chart.update();
+
+        var times = [];
+        var sizes = [];
+        chartData[this.index].data.forEach(dic => {
+            times.push(dic.y);
+            sizes.push(dic.x)
+        })
+        update_table_col(table, this.index + 1, times); // col0 is the size labels
+        update_table_col(table, 0, sizes);
 
     }
+    run_test() {
+
+        if (this.paused == true) {
+            return
+        }
+
+        let current_size = this.size
+
+        if (current_size > 4000) {
+
+            this.size = 16;
+            this.sizes = [];
+
+            this.btn.click(); //toggle_pause();
+            return
+        }
+
+        this.sizes.push(current_size)
+
+        let t = this.run(current_size, 'regular', this.params)
+
+        if (typeof (t.then) === "undefined") {
+            this.displayResult(current_size, t);
+        } else if (t.then instanceof Function) {
+            t.then(_t => this.displayResult(current_size, _t));
+        } else {
+            throw new Error('unrecognized t');
+        }
+
+        this.size = this.size * 2;
+        requestAnimationFrame(() => this.run_test());
+    }
+
 }
 
-function init_chart(config, sizes) {
+var config;
+var chart;
+var table;
 
-    config.data.labels = sizes;
-
-    chart.update();
-
-}
-
-// (inputRows - fieldSize + 2 * zeroPad) / stride + 1) >=0 needs to be asserted
-const convParams = {
-    inDepth: 8,
-    outDepth: 3,
-    filterSize: 7,
-    stride: 2,
-    zeroPad: 0 // adjust zeroPad so that (inputSize - filterSize + 2* zeroPad) is integer
-};
-
-var bm_dljs = new ConvBenchmark('dljs');
-var bm_cnjs = new ConvBenchmark('cnjs');
+var convParams;
+var bms = [];
 
 function run() {
 
-    if (bm_dljs.paused === false) {
+    const canvas = document.getElementById(`plot`);
 
-        setTimeout(function () {
-            bm_dljs.run_test(convParams);
-            run()
-        }, 0);
+    canvas.width = 400;
+    canvas.height = 300;
+    const context = canvas.getContext('2d');
 
-    } else if (bm_cnjs.paused == false) {
+    config = {
+        type: 'line',
+        data: {
+            datasets: [{
+                data: [],
+                fill: false,
+                label: ' ',
+                pointRadius: 0,
+                borderColor: 'rgba(75,192,192,1)',
+                backgroundColor: 'rgba(75,192,192,1)',
+                borderWidth: 1,
+                // lineTension: 0,
+                // pointHitRadius: 8
+            }]
+        },
+        options: {
+            animation: {
+                duration: 0
+            },
+            responsive: true,
+            scales: {
+                xAxes: [{
+                    type: 'linear',
+                    position: 'bottom'
+                }],
+                yAxes: [{
+                    ticks: {
+                        min: null,
+                        callback: (label, index, labels) => {
+                            let num = Number(label).toFixed(2);
+                            return `${num}`;
+                        }
+                    }
+                }]
+            }
+        }
+    };
 
-        setTimeout(function () {
-            bm_cnjs.run_test(convParams);
-            run()
-        }, 0);
+    chart = new Chart(context, config);
 
-    } else {
-        setTimeout(function () {
-            // console.log('outside')
-            run();
-        }, 1000);
-    }
+    chartData = [{
+            label: 'deeplearnjs -- t1',
+            backgroundColor: window.chartColors.red,
+            borderColor: window.chartColors.red,
+            data: [],
+            fill: false,
+            pointRadius: 3,
+            pointHitRadius: 5,
+            borderWidth: 1,
+            // lineTension: 0,
+        },
+        {
+            label: "convnetjs -- t2",
+            backgroundColor: window.chartColors.blue,
+            borderColor: window.chartColors.blue,
+            data: [],
+            fill: false,
+            pointRadius: 3,
+            pointHitRadius: 5,
+            borderWidth: 1,
+            // lineTension: 0,
+        }
+    ]
+    config.data.datasets = chartData;
+    chart.update();
+
+    table = document.getElementById(`divTable`);
+    init_table(table, ['Size', 't1 (ms)', 't2 (ms)']);
+
+    // (inputRows - fieldSize + 2 * zeroPad) / stride + 1) >=0 needs to be asserted
+    const convParams = {
+        inDepth: 8,
+        outDepth: 3,
+        filterSize: 7,
+        stride: 2,
+        zeroPad: 0 // adjust zeroPad so that (inputSize - filterSize + 2* zeroPad) is integer
+    };
+
+    bms.push(new ConvBenchmark('dljs', convParams));
+    bms.push(new ConvBenchmark('cnjs', convParams));
 
 }
 
+function monitor() {
+
+    bms.forEach(bm => bm.monitorRequestAndUpdateUI());
+
+    setTimeout(function () {
+        monitor();
+    }, 100);
+}
 
 function start() {
 
@@ -381,4 +428,5 @@ function start() {
     }
 
     run();
+    monitor();
 }
