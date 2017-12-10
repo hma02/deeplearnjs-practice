@@ -140,15 +140,12 @@ class ConvBenchmark {
             if (opType === 'regular') {
                 x = Array3D.randUniform(inShape, -1, 1);
                 const wShape = computeWeightsShape4D(
-                    inDepth, params.outDepth, filterSize, filterSize);
+                    inDepth, outDepth, filterSize, filterSize);
                 var W = Array4D.randUniform(wShape, -1, 1);
                 // const b = Array1D.randUniform([outDepth], -1, 1);
                 // console.log(W.getValues(), W.shape, x.getValues(), x.shape)
 
-                benchmark = () => {
-                    out = math.conv2d(x, W, null, stride, zeroPad); //bias=null, pad =0, this padding will be applied on four borders of input : left right top bottom
-                }
-
+                benchmark = () => math.conv2d(x, W, null, stride, zeroPad); //bias=null, pad =0, this padding will be applied on four borders of input : left right top bottom
 
             } else if (opType === 'transposed') {
 
@@ -158,10 +155,7 @@ class ConvBenchmark {
                 W = Array4D.randUniform(wShape, -1, 1);
 
                 // no bias for conv transposed
-                benchmark = () => {
-                    out = math.conv2dTranspose(x, W, [size, size, inDepth], stride, pad);
-                };
-
+                benchmark = () => math.conv2dTranspose(x, W, [size, size, inDepth], stride, pad);
 
             } else if (opType === 'depthwise') {
                 x = Array3D.randUniform(inShape, -1, 1);
@@ -170,10 +164,7 @@ class ConvBenchmark {
                 W = Array4D.randUniform(wShape, -1, 1);
 
                 // no bias for depth wise conv
-                benchmark = () => {
-                    out = math.depthwiseConv2D(x, W, stride, pad);
-                };
-
+                benchmark = () => math.depthwiseConv2D(x, W, stride, pad);
             } else {
                 throw new Error(`Unknown option ${opType}`);
             }
@@ -196,39 +187,41 @@ class ConvBenchmark {
 
             // console.log(layer)
 
-            benchmark = () => {
-                out = layer.forward(x);
-            }
-
-        }
-
-        if (this.libName === 'dljs') {
-            // Warmup.
-            gpgpu.runQuery(benchmark);
-            out.dispose();
+            benchmark = () => layer.forward(x);
         }
 
         let totalTime;
 
         if (this.libName === 'dljs') {
 
+            // Warmup.
+            if (ENV.get('WEBGL_DISJOINT_QUERY_TIMER_EXTENSION_ENABLED')) {
+                gpgpu.runQuery(benchmark);
+            } else {
+                out = benchmark();
+                out.dataSync();
+                out.dispose();
+            }
+
             if (ENV.get('WEBGL_DISJOINT_QUERY_TIMER_EXTENSION_RELIABLE')) {
                 totalTime = gpgpu.runQuery(benchmark);
             } else {
                 const start = performance.now();
 
-                benchmark();
+                out = benchmark();
                 out.dataSync();
 
                 totalTime = performance.now() - start;
+                out.dispose();
             }
+
         } else {
 
             const start = performance.now();
 
-            benchmark();
-
+            out = benchmark();
             totalTime = performance.now() - start;
+            out = null;
         }
 
         // console.log(`${this.libName} convolution output: ${out}`)
@@ -238,13 +231,11 @@ class ConvBenchmark {
             if (this.libName === 'dljs') {
                 x.dispose();
                 W.dispose();
-                out.dispose();
                 if (b != null) {
                     b.dispose();
                 }
             } else {
                 x = null;
-                out = null;
             }
 
         };
@@ -379,7 +370,7 @@ function run() {
 function start() {
 
     supported = detect_support();
-    // supported = true;
+    supported = true;
 
     if (supported) {
         console.log('device & webgl supported')

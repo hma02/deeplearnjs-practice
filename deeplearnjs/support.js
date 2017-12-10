@@ -63,10 +63,9 @@ function detect_support() {
     // document.addEventListener('WebComponentsReady', function (event) {
     var supported = false
     if (isNotSupported()) {
-        const title = `This device is not yet supported`;
+        const title = `This device is not well supported`;
         const content = `
-        Please try to load this demo on a desktop computer with Chrome.
-        DeeplearnJS developers are working hard to add support for other devices. Check back soon!
+        Please consider loading this demo on a desktop computer with Chrome for best performance.
       `;
         buildAndShowDialog(title, content);
     } else if (!isWebGLEnabled()) {

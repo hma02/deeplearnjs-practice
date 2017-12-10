@@ -463,7 +463,7 @@ function run() {
         if (paused == false) {
             request = true;
         }
-         ga('send', 'event', 'deeplearn_mnist_starter', 'click', 'Start', 50);
+        ga('send', 'event', 'deeplearn_mnist_starter', 'click', 'Start', 50);
     });
 
     accuracyElt = document.getElementById('accuracy');
@@ -579,6 +579,7 @@ function monitor() {
 function start() {
 
     supported = detect_support();
+    supported = true;
 
     btn = document.getElementById("buttontp");
 
