@@ -320,7 +320,7 @@ function update_table_col(table, colIndex, contents) {
     // console.assert(contents.length + 1 === table.rows.length, `contents length does not match table length`);
 
     //pad missing rows with empty string
-    initLength = table.rows.length;
+    var initLength = table.rows.length;
     if (contents.length + 1 > initLength) {
         initWidth = table.rows[initLength - 1].cells.length;
         missingLength = contents.length + 1 - initLength;
@@ -335,4 +335,11 @@ function update_table_col(table, colIndex, contents) {
         insert_into_table(table, i + 1, colIndex, contents[i]) // skip the header row 0, start from row 1
     }
 
+}
+
+function clear_table(table, startRow = 1) {
+    var len = table.rows.length;
+    for (let r = 0; r < len - 1; r++) {
+        table.deleteRow(startRow);
+    }
 }

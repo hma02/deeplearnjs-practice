@@ -30,13 +30,13 @@ function computeWeightsShape4D(
 
 class ConvBenchmark {
 
-    constructor(libName, params, sizeRange) {
+    constructor(libName, params, sizeMax) {
         this.libName = libName
         this.index = this.libName === 'dljs' ? 0 : 1;
         this.params = params;
-        this.sizeRange = sizeRange
+        this.sizeMax = sizeMax
 
-        this.size = sizeRange;
+        this.size = 1;
         this.sizes = [];
 
         this.paused = true;
@@ -56,9 +56,9 @@ class ConvBenchmark {
         });
     }
 
-    changeSizeRange(sizeRange) {
-        this.sizeRange = sizeRange;
-        this.size = this.sizeRange;
+    changeSizeRange(sizeMax) {
+        this.sizeMax = sizeMax;
+        this.size = 1;
         this.sizes = [];
         chartData[this.index].data = [];
         config.data.datasets = chartData;
@@ -289,9 +289,9 @@ class ConvBenchmark {
 
         let current_size = this.size
 
-        if (current_size > 128 * this.sizeRange) {
+        if (current_size > this.sizeMax) {
 
-            this.size = this.sizeRange;
+            this.size = 1;
             this.sizes = [];
 
             this.btn.click(); //toggle_pause();
@@ -320,7 +320,7 @@ var config;
 var chart;
 var table;
 
-var sizeRange;
+var sizeMax;
 var convParams;
 var bms = [];
 
@@ -403,16 +403,16 @@ function run() {
 
 
     var sizeRangeDropdown = document.getElementById("range-dropdown");
-    sizeRange = 16;
-    var ind = indexOfDropdownOptions(sizeRangeDropdown.options, sizeRange)
+    sizeMax = 1024;
+    var ind = indexOfDropdownOptions(sizeRangeDropdown.options, sizeMax)
     sizeRangeDropdown.options[ind].selected = 'selected';
 
     sizeRangeDropdown.addEventListener('change', (event) => {
-        sizeRange = event.target.value;
-        bms.forEach(bm => bm.changeSizeRange(Number(sizeRange)))
-        console.log(`change size range to [${sizeRange}, ${sizeRange * 128}]`)
+        sizeMax = event.target.value;
+        bms.forEach(bm => bm.changeSizeRange(Number(sizeMax)))
+        clear_table(table);
+        console.log(`change size range to [${1}, ${sizeMax}]`)
     });
-
 
     // (inputRows - fieldSize + 2 * zeroPad) / stride + 1) >=0 needs to be asserted
     const convParams = {
@@ -423,8 +423,14 @@ function run() {
         zeroPad: 0 // adjust zeroPad so that (inputSize - filterSize + 2* zeroPad) is integer
     };
 
-    bms.push(new ConvBenchmark('dljs', convParams, sizeRange));
-    bms.push(new ConvBenchmark('cnjs', convParams, sizeRange));
+    document.getElementById('inDepth').innerHTML = `${convParams.inDepth}`;
+    document.getElementById('outDepth').innerHTML = `${convParams.outDepth}`;
+    document.getElementById('filterSize').innerHTML = `${convParams.filterSize}`;
+    document.getElementById('stride').innerHTML = `${convParams.stride}`;
+    document.getElementById('zeroPad').innerHTML = `${convParams.zeroPad}`;
+
+    bms.push(new ConvBenchmark('dljs', convParams, sizeMax));
+    bms.push(new ConvBenchmark('cnjs', convParams, sizeMax));
 
 }
 
