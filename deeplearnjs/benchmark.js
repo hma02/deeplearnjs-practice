@@ -71,7 +71,7 @@ class ConvBenchmark {
             if (this.sizes.length > 0) {
                 this.btn.value = 'Resume';
             } else {
-                this.btn.value = 'Run Benchmark';
+                this.btn.value = 'Run';
             }
         } else {
             this.btn.value = 'Pause'
@@ -361,7 +361,7 @@ function run() {
                     ticks: {
                         min: null,
                         callback: (label, index, labels) => {
-                            let num = Number(label).toFixed(2);
+                            let num = Number(label).toFixed(0);
                             return `${num}`;
                         }
                     }

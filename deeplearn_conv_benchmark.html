@@ -65,7 +65,7 @@
     .title {
         align-items: center;
         color: black;
-        font-size: 18px;
+        font-size: 15px;
         font-weight: bold;
         padding-bottom: 10px;
         padding-top: 10px;
@@ -80,6 +80,12 @@
     .stat-value {
         display: table-cell;
         padding: 5px 15px 5px 0;
+    }
+
+    .pil>li>a {
+        font-size: 11px;
+        padding: 1px;
+        text-align: center;
     }
 </style>
 
@@ -162,7 +168,7 @@
 
                             <div class="title">DeeplearnJS </div>
 
-                            <input class="btn btn-primary btn-md" id="buttontp_dljs" style="background-color: rgb(255, 99, 132);" type="submit" value="Run Benchmark"
+                            <input class="btn btn-primary btn-md" id="buttontp_dljs" style="background-color: rgb(255, 99, 132);" type="submit" value="Run"
                             />
 
                         </div>
@@ -171,7 +177,7 @@
 
                             <div class="title">ConvNetJS </div>
 
-                            <input class="btn btn-primary btn-md" id="buttontp_cnjs" style="background-color: rgb(54, 162, 235);" type="submit" value="Run Benchmark"
+                            <input class="btn btn-primary btn-md" id="buttontp_cnjs" style="background-color: rgb(54, 162, 235);" type="submit" value="Run"
                             />
 
                         </div>
@@ -229,7 +235,7 @@
 
                 <div class="item row col-md-6 col-sm-12 col-xs-12">
 
-                    <div class="tab-content col-md-8 col-sm-8 col-xs-8">
+                    <div class="tab-content col-md-10 col-sm-10 col-xs-10">
                         <div id="home" class="tab-pane fade in active">
                             <h4>Benchmark Result</h4>
                             <div class="table-responsive">
@@ -349,17 +355,71 @@
                                 </table>
                             </div>
                         </div>
+                        <div id="menu3" class="tab-pane fade">
+                            <h4>Iphone 5s, Safari</h4>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Size</th>
+                                            <th>t1 (ms)</th>
+                                            <th>t2 (ms)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>16</td>
+                                            <td>3.200</td>
+                                            <td>5.800</td>
+                                        </tr>
+                                        <tr>
+                                            <td>32</td>
+                                            <td>5.100</td>
+                                            <td>4.600</td>
+                                        </tr>
+                                        <tr>
+                                            <td>64</td>
+                                            <td>5.800</td>
+                                            <td>21.500</td>
+                                        </tr>
+                                        <tr>
+                                            <td>128</td>
+                                            <td>13.200</td>
+                                            <td>24.400</td>
+                                        </tr>
+                                        <tr>
+                                            <td>256</td>
+                                            <td>56.000</td>
+                                            <td>105.300</td>
+                                        </tr>
+                                        <tr>
+                                            <td>512</td>
+                                            <td>157.000</td>
+                                            <td>488.400</td>
+                                        </tr>
+                                        <tr>
+                                            <td>1024</td>
+                                            <td>779.300</td>
+                                            <td>1890.700</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-4 col-sm-4 col-xs-4">
-                        <ul class="nav nav-pills nav-stacked">
+                    <div class="col-md-2 col-sm-2 col-xs-2">
+                        <ul class="nav nav-pills nav-stacked pil">
                             <li class="active">
-                                <a data-toggle="pill" style="font-size: 11px" href="#home">Result</a>
+                                <a data-toggle="pill" href="#home">Res</a>
                             </li>
                             <li>
-                                <a data-toggle="pill" style="font-size: 11px" href="#menu1">Sample 1</a>
+                                <a data-toggle="pill" href="#menu1">1</a>
                             </li>
                             <li>
-                                <a data-toggle="pill" style="font-size: 11px" href="#menu2">Sample 2</a>
+                                <a data-toggle="pill" href="#menu2">2</a>
+                            </li>
+                            <li>
+                                <a data-toggle="pill" href="#menu3">3</a>
                             </li>
                         </ul>
                     </div>
