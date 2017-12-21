@@ -880,7 +880,7 @@ function run() {
             if (graphRunner != null) {
                      graphRunner = null;
             }
-            graphRunner = new MyGraphRunner(math, session, eventObserver);
+            graphRunner = new GraphRunner(math, session, eventObserver);
             
             // Update the dataset.
             const datasetName = event.target.value;
@@ -896,7 +896,7 @@ function run() {
             if (graphRunner != null) {
                      graphRunner = null;
             }
-            graphRunner = new MyGraphRunner(math, session, eventObserver);
+            graphRunner = new GraphRunner(math, session, eventObserver);
             
             // Update the model.
 
