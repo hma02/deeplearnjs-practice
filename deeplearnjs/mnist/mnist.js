@@ -876,6 +876,12 @@ function run() {
 
     document.querySelector('#dataset-dropdown').addEventListener(
         'change', (event) => {
+            
+            if (graphRunner != null) {
+                     graphRunner = null;
+            }
+            graphRunner = new MyGraphRunner(math, session, eventObserver);
+            
             // Update the dataset.
             const datasetName = event.target.value;
             updateSelectedDataset(datasetName);
@@ -886,6 +892,12 @@ function run() {
         });
     document.querySelector('#model-dropdown').addEventListener(
         'change', (event) => {
+            
+            if (graphRunner != null) {
+                     graphRunner = null;
+            }
+            graphRunner = new MyGraphRunner(math, session, eventObserver);
+            
             // Update the model.
 
             const modelName = event.target.value;
