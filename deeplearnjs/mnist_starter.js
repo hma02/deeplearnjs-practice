@@ -1,8 +1,8 @@
 var Graph = dl.Graph;
 var Tensor = dl.Tensor;
 var Scalar = dl.Scalar;
-var NDArrayMathGPU = dl.NDArrayMathGPU;
-var NDArrayMathCPU = dl.NDArrayMathCPU;
+var ENV = dl.ENV;
+var NDArrayMath = dl.NDArrayMath;
 var Session = dl.Session;
 var track = dl.track;
 var keep = dl.keep;
@@ -145,8 +145,7 @@ function train1Batch(shouldFetchCost) {
 
         for (let i = 0; i < batchSize; i++) {
             const metricValue = session.eval(accuracyTensor, inferenceFeedEntries);
-
-            metric = math.add(metric, metricValue);
+            metric = math.add(metric, metricValue.asType('float32'));
         }
 
         metric = math.divide(metric, Scalar.new(batchSize));
@@ -303,8 +302,8 @@ function buildModel() {
         inferenceContainer.appendChild(inferenceExampleElement);
     }
 
-
-    math = mathGPU;
+    ENV.setMath(mathGPU);
+    math = ENV.math;
 
     graph = new Graph();
 
@@ -449,8 +448,9 @@ function populateDatasets(callback) {
 
 function run() {
 
-    mathGPU = new NDArrayMathGPU();
-    mathCPU = new NDArrayMathCPU();
+    const safeMode = false;
+    mathGPU = new NDArrayMath('webgl', safeMode);
+    mathCPU = new NDArrayMath('cpu', safeMode);
 
     chartData = []
 
@@ -478,7 +478,9 @@ function run() {
 
 
     function updateSelectedEnvironment(selectedEnvName) {
-        math = (selectedEnvName === 'GPU') ? mathGPU : mathCPU;
+        const _math = (selectedEnvName === 'GPU') ? mathGPU : mathCPU;
+        ENV.setMath(_math)
+        math = ENV.math;
         console.log('math =', math === mathGPU ? 'mathGPU' : 'mathCPU')
     }
     var envDropdown = document.getElementById("environment-dropdown");
