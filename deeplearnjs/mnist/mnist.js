@@ -866,16 +866,38 @@ function run() {
     var ind = indexOfDropdownOptions(envDropdown.options, selectedEnvName)
     envDropdown.options[ind].selected = 'selected';
     updateSelectedEnvironment(selectedEnvName, graphRunner);
-
-    createGraphRunner();
-
     optimizer = new MomentumOptimizer(learningRate, momentum);
+    
+    const eventObserver = {
+        batchesTrainedCallback: (batchesTrained) =>
+            displayBatchesTrained(batchesTrained),
+        avgCostCallback: (avgCost) => displayCost(avgCost),
+        metricCallback: (metric) => displayAccuracy(metric),
+        inferenceExamplesCallback:
+            (inputFeeds, inferenceOutputs) =>
+            displayInferenceExamplesOutput(inputFeeds, inferenceOutputs),
+        inferenceExamplesPerSecCallback: (examplesPerSec) =>
+            displayInferenceExamplesPerSec(examplesPerSec),
+        trainExamplesPerSecCallback: (examplesPerSec) =>
+            displayExamplesPerSec(examplesPerSec),
+        totalTimeCallback: (totalTimeSec) => {
+            totalTimeSec = totalTimeSec.toFixed(1);
+            document.getElementById("totalTimeSec").innerHTML = `Total time: ${totalTimeSec} sec.`;
+        },
+    };
+    graphRunner = new GraphRunner(math, session, eventObserver);
 
     // Set up datasets.
     populateDatasets();
 
     document.querySelector('#dataset-dropdown').addEventListener(
         'change', (event) => {
+            
+            if (graphRunner != null) {
+                     graphRunner = null;
+            }
+            graphRunner = new GraphRunner(math, session, eventObserver);
+            
             // Update the dataset.
             const datasetName = event.target.value;
             updateSelectedDataset(datasetName);
@@ -886,6 +908,12 @@ function run() {
         });
     document.querySelector('#model-dropdown').addEventListener(
         'change', (event) => {
+            
+            if (graphRunner != null) {
+                     graphRunner = null;
+            }
+            graphRunner = new GraphRunner(math, session, eventObserver);
+            
             // Update the model.
 
             const modelName = event.target.value;
@@ -949,28 +977,6 @@ function updateSelectedEnvironment(selectedEnvName, _graphRunner = null) {
         _graphRunner.setMath(math);
     }
 
-}
-
-
-function createGraphRunner() {
-    const eventObserver = {
-        batchesTrainedCallback: (batchesTrained) =>
-            displayBatchesTrained(batchesTrained),
-        avgCostCallback: (avgCost) => displayCost(avgCost),
-        metricCallback: (metric) => displayAccuracy(metric),
-        inferenceExamplesCallback:
-            (inputFeeds, inferenceOutputs) =>
-            displayInferenceExamplesOutput(inputFeeds, inferenceOutputs),
-        inferenceExamplesPerSecCallback: (examplesPerSec) =>
-            displayInferenceExamplesPerSec(examplesPerSec),
-        trainExamplesPerSecCallback: (examplesPerSec) =>
-            displayExamplesPerSec(examplesPerSec),
-        totalTimeCallback: (totalTimeSec) => {
-            totalTimeSec = totalTimeSec.toFixed(1);
-            document.getElementById("totalTimeSec").innerHTML = `Total time: ${totalTimeSec} sec.`;
-        },
-    };
-    graphRunner = new GraphRunner(math, session, eventObserver);
 }
 
 
