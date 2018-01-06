@@ -24,7 +24,7 @@ var ApplicationState = {
     TRAINING: 2
 }
 
-const CONTENT_NAMES = ['stata', 'Upload from file'];
+const CONTENT_NAMES = ['stata'];
 const STYLE_MAPPINGS = {
     'Udnie, Francis Picabia': 'udnie',
     'Rain Princess, Leonid Afremov': 'rain_princess',
@@ -196,6 +196,7 @@ function run() {
     // });
 
     fileSelect = document.querySelector('#fileSelect');
+
     // tslint:disable-next-line:no-any
     fileSelect.addEventListener('change', (event) => {
         const f = event.target.files[0];
@@ -221,10 +222,9 @@ function run() {
     // tslint:disable-next-line:no-any
     contentDropdown.addEventListener('change', (event) => {
         const selected = event.target.value
+        console.log('event value', selected)
         if (selected === 'Use webcam') {
             openWebcamModal();
-        } else if (selected === 'Upload from file') {
-            fileSelect.click();
         } else {
             contentImgElement.src = 'deeplearnjs/style_transfer/images/' + selected + '.jpg';
         }

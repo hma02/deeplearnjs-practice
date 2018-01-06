@@ -255,7 +255,7 @@
                     <p style='font-size:1.2em'>This demo is reproduced from deeplearnjs's
                         <a href="https://github.com/PAIR-code/deeplearnjs/tree/master/demos/fast-style-transfer">fast style tranfer demo</a> originally developed by
                         <a href="https://github.com/reiinakano">Reiichiro Nakano</a>
-                        in typescript.
+                        in typescript. Tested in Google Chrome.
                     </p>
                 </div>
                 <p>Last Update: 2018-1-5</p>
@@ -323,10 +323,18 @@
                     and time.
                 </paper-tooltip> -->
 
-                    <div class="form-group">
-                        <label for="content-dropdown">Content</label>
-                        <select class="form-control" id="content-dropdown">
-                        </select>
+                    <label for="content-dropdown">Content</label>
+                    <div class="form-group item row">
+                        <div class="col-md-6 col-sm-6 col-xs-6">
+                            <select class="form-control" id="content-dropdown">
+                            </select>
+                        </div>
+                        <div class="col-md-6 col-sm-6 col-xs-6">
+                            <label class="btn btn-default btn-file" id="sample-file-label">
+                                <i class="fa fa-upload" aria-hidden="true"></i> Upload from file
+                                <input type="file" id="fileSelect" style="display: none" accept="image/x-png,image/gif,image/jpeg" />
+                            </label>
+                        </div>
                     </div>
                 </div>
 
@@ -350,8 +358,6 @@
                     <canvas id="imageCanvas" width="1" height="1"></canvas>
                 </div>
             </footer>
-
-            <input type="file" id="fileSelect" style="display: none" accept="image/x-png,image/gif,image/jpeg" />
 
             <div id="webcam-dialog" class="modal fade" role="dialog">
 
