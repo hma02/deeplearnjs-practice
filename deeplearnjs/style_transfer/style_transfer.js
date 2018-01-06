@@ -270,6 +270,7 @@ function run() {
                 errMessage.textContent = error;
                 errMessage.style.display = 'block';
             });
+        ga('send', 'event', 'deeplearn_style_transfer', 'click', 'Start Style Transfer', 0);
     });
 }
 
