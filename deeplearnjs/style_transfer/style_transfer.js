@@ -258,18 +258,18 @@ function run() {
 
         transformNet.load()
             .then(() => {
-                startButton.textContent = 'Processing image';
+                startButton.value = 'Processing image';
                 runInference();
-                startButton.textContent = 'Start Style Transfer';
+                startButton.value = 'Start Style Transfer';
                 startButton.disabled = false;
             })
             .catch((error) => {
                 console.log(error);
-                startButton.textContent = 'Start Style Transfer';
+                startButton.value = 'Start Style Transfer';
                 startButton.disabled = false;
                 const errMessage =
                     document.querySelector('#load-error-message');
-                errMessage.textContent = error;
+                errMessage.innerHTML = error;
                 errMessage.style.display = 'block';
             });
         ga('send', 'event', 'deeplearn_style_transfer', 'click', 'Start Style Transfer', 0);
