@@ -77,7 +77,7 @@ class NDArrayLogitsVisualizer {
         if (typeof NDArrayMathCPU === "undefined") {
             mathCpu = new dl.NDArrayMath('cpu', false); // version > 0.3.13
         } else {
-            matchCpu = new NDArrayMathCPU(); //   version <= 0.3.13
+            mathCpu = new NDArrayMathCPU(); //   version <= 0.3.13
         }
 
         const labelClass = mathCpu.argMax(labelLogits).get();
