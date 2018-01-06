@@ -240,16 +240,18 @@ function run() {
     }
 
     styleDropdown.addEventListener('change', (event) => {
+        selectedStyleName = event.target.value
+        console.log('style dropdown opened', STYLE_MAPPINGS[selectedStyleName])
+
         styleImgElement.src =
-            'deeplearnjs/style_transfer/images/' + STYLE_MAPPINGS[event.target.value] + '.jpg';
+            'deeplearnjs/style_transfer/images/' + STYLE_MAPPINGS[selectedStyleName] + '.jpg';
     });
 
     // Add listener to start
     startButton = document.querySelector('#btnstart');
     startButton.addEventListener('click', () => {
-        (document.querySelector('#load-error-message')).style.display =
-            'none';
-        startButton.textContent =
+        (document.querySelector('#load-error-message')).style.display = 'none';
+        startButton.value =
             'Starting style transfer.. Downloading + running model';
         startButton.disabled = true;
         transformNet.setStyle(STYLE_MAPPINGS[selectedStyleName]);
